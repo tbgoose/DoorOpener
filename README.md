@@ -7,8 +7,11 @@ A simple web application that allows neighbors to open the apartment building's 
 - Clean, mobile-friendly web interface
 - MQTT integration with Home Assistant
 - Easy to deploy and configure
+- Docker support for containerized deployment
 
 ## Setup Instructions
+
+### Standard Setup
 
 1. Clone this repository
 2. Create a `config.ini` file based on the `config.ini.example` template:
@@ -25,6 +28,20 @@ A simple web application that allows neighbors to open the apartment building's 
    python app.py
    ```
 6. Access the web interface at `http://your-server-ip:5000`
+
+### Docker Setup
+
+1. Clone this repository
+2. Create a `config.ini` file based on the `config.ini.example` template:
+   ```
+   cp config.ini.example config.ini
+   ```
+3. Edit `config.ini` with your MQTT broker details and Home Assistant entity information
+4. Build and start the Docker container:
+   ```
+   docker-compose up -d
+   ```
+5. Access the web interface at `http://your-server-ip:5000`
 
 ## Configuration
 
@@ -47,3 +64,33 @@ This application is designed for use on a local network. For additional security
 - Consider adding authentication
 - Use HTTPS if exposing to the internet
 - Restrict access using a reverse proxy or firewall rules
+
+## Docker Deployment
+
+The application includes Docker support for easy deployment:
+
+- `Dockerfile`: Defines the container image
+- `docker-compose.yml`: Orchestrates the container deployment
+
+### Docker Commands
+
+- Start the application:
+  ```
+  docker-compose up -d
+  ```
+
+- View logs:
+  ```
+  docker-compose logs -f
+  ```
+
+- Stop the application:
+  ```
+  docker-compose down
+  ```
+
+- Rebuild after changes:
+  ```
+  docker-compose build
+  docker-compose up -d
+  ```

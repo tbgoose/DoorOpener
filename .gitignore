@@ -18,6 +18,11 @@ lib/
 lib64/
 parts/
 sdist/
+
+# Docker-related files
+.dockerignore
+.docker/
+docker-compose.override.yml
 var/
 *.egg-info/
 .installed.cfg
