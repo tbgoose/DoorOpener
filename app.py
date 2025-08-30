@@ -83,17 +83,27 @@ def index():
 @app.route('/open-door', methods=['POST'])
 def open_door():
     try:
+        data = request.get_json()
+        pin_from_request = (data.get('pin').strip() if data and data.get('pin') else None)
+        pin_required = config.get('Security', 'pin', fallback=None)
+        if pin_required is not None:
+            pin_required = pin_required.strip()
+            if not pin_required:
+                return jsonify({"status": "error", "message": "PIN not set in config"}), 500
+            if not pin_from_request:
+                return jsonify({"status": "error", "message": "PIN required"}), 400
+            if pin_from_request != pin_required:
+                return jsonify({"status": "error", "message": "Invalid PIN"}), 403
+        else:
+            return jsonify({"status": "error", "message": "PIN not set in config"}), 500
         # Connect to MQTT broker
         client.connect(mqtt_host, mqtt_port, 60)
         client.loop_start()
-        
         # Subscribe to topics for debugging
         client.subscribe(f"zigbee2mqtt/{device_name}/#")
-        
         # Try different approaches to trigger the door switch
         success = False
         error_messages = []
-        
         # Approach 1: Direct Zigbee2MQTT command
         try:
             # For Zigbee2MQTT switches, typically use "state": "ON"
@@ -103,7 +113,6 @@ def open_door():
             success = True
         except Exception as e:
             error_messages.append(f"Zigbee approach failed: {str(e)}")
-        
         # Approach 2: Home Assistant service call
         if not success:
             try:
@@ -113,14 +122,11 @@ def open_door():
                 success = True
             except Exception as e:
                 error_messages.append(f"HA service approach failed: {str(e)}")
-        
         # Wait briefly to capture any responses
         time.sleep(1)
-        
         # Disconnect from MQTT broker
         client.loop_stop()
         client.disconnect()
-        
         if success:
             return jsonify({"status": "success", "message": "Door open command sent"})
         else:

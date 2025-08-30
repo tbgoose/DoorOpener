@@ -75,6 +75,7 @@
 <body>
     <div class="container">
         <h1>Apartment Door Opener</h1>
+        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" style="margin-bottom: 1rem; padding: 10px; font-size: 18px; border-radius: 5px; border: 1px solid #ccc; width: 80%; max-width: 220px;">
         <button id="openDoorBtn" class="door-button">Open Door</button>
         <div id="status" class="status"></div>
     </div>
@@ -90,11 +91,13 @@
                 openDoorBtn.textContent = 'Opening...';
                 
                 // Send request to open door
+                const pin = document.getElementById('pinInput').value;
                 fetch('/open-door', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    }
+                    },
+                    body: JSON.stringify({ pin: pin })
                 })
                 .then(response => response.json())
                 .then(data => {
