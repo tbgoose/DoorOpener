@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+import os
+import configparser
+import paho.mqtt.client as mqtt
+import json
+import time
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+
+# Load configuration
+config = configparser.ConfigParser()
+config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
+
+if not os.path.exists(config_path):
+    raise FileNotFoundError(f"Config file not found at {config_path}. Please create it based on config.ini.example")
+
+config.read(config_path)
+
+# MQTT Configuration
+mqtt_host = config['MQTT']['host']
+mqtt_port = int(config['MQTT']['port'])
+mqtt_username = config['MQTT']['username']
+mqtt_password = config['MQTT']['password']
+
+# Get switch entity and extract device name for Zigbee2MQTT
+switch_entity = config['HomeAssistant']['switch_entity']
+device_name = switch_entity.split('.')[1] if '.' in switch_entity else switch_entity
+
+# For Zigbee2MQTT, the topic is typically zigbee2mqtt/DEVICE_NAME/set
+zigbee_topic = f"zigbee2mqtt/{device_name}/set"
+
+# Use configured topic or fallback to zigbee topic
+mqtt_topic = config.get('HomeAssistant', 'topic', fallback=zigbee_topic)
+
+# For direct Home Assistant service calls
+ha_service_topic = "homeassistant/service/switch/turn_on"
+
+# Initialize MQTT client
+client = mqtt.Client()
+client.username_pw_set(mqtt_username, mqtt_password)
+
+# For debugging - print received messages
+def on_message(client, userdata, message):
+    print(f"Received message on topic {message.topic}: {message.payload.decode()}")
+
+client.on_message = on_message
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/mqtt-info')
+def mqtt_info():
+    return jsonify({
+        "host": mqtt_host,
+        "topic": mqtt_topic,
+        "zigbee_topic": zigbee_topic,
+        "ha_service_topic": ha_service_topic,
+        "device_name": device_name,
+        "entity": switch_entity
+    })
+
+@app.route('/open-door', methods=['POST'])
+def open_door():
+    try:
+        # Connect to MQTT broker
+        client.connect(mqtt_host, mqtt_port, 60)
+        client.loop_start()
+        
+        # Subscribe to topics for debugging
+        client.subscribe(f"zigbee2mqtt/{device_name}/#")
+        
+        # Try different approaches to trigger the door switch
+        success = False
+        error_messages = []
+        
+        # Approach 1: Direct Zigbee2MQTT command
+        try:
+            # For Zigbee2MQTT switches, typically use "state": "ON"
+            zigbee_payload = json.dumps({"state": "ON"})
+            print(f"Publishing to {zigbee_topic}: {zigbee_payload}")
+            client.publish(zigbee_topic, zigbee_payload)
+            success = True
+        except Exception as e:
+            error_messages.append(f"Zigbee approach failed: {str(e)}")
+        
+        # Approach 2: Home Assistant service call
+        if not success:
+            try:
+                ha_payload = json.dumps({"entity_id": switch_entity})
+                print(f"Publishing to {ha_service_topic}: {ha_payload}")
+                client.publish(ha_service_topic, ha_payload)
+                success = True
+            except Exception as e:
+                error_messages.append(f"HA service approach failed: {str(e)}")
+        
+        # Wait briefly to capture any responses
+        time.sleep(1)
+        
+        # Disconnect from MQTT broker
+        client.loop_stop()
+        client.disconnect()
+        
+        if success:
+            return jsonify({"status": "success", "message": "Door open command sent"})
+        else:
+            return jsonify({"status": "error", "message": "\n".join(error_messages)}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

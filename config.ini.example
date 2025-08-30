@@ -1,0 +1,9 @@
+[MQTT]
+host = 192.168.178.79
+port = 1883
+username = your_mqtt_username
+password = your_mqtt_password
+
+[HomeAssistant]
+switch_entity = switch.your_door_switch_entity_id
+topic = homeassistant/switch/door_opener/set
