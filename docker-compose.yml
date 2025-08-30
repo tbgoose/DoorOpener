@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   dooropener:
@@ -6,12 +6,29 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"  # Only expose to localhost for security
     volumes:
-      - ./config.ini:/app/config.ini
+      - ./config.ini:/app/config.ini:ro  # Read-only mount
     restart: unless-stopped
     networks:
       - dooropener_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Set resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
 
 networks:
   dooropener_network:

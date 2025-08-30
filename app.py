@@ -4,9 +4,27 @@ import configparser
 import paho.mqtt.client as mqtt
 import json
 import time
+import logging
 from flask import Flask, render_template, request, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# Support for reverse proxy
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# Set secret key for sessions/CSRF protection
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24))
 
 # Load configuration
 config = configparser.ConfigParser()
@@ -40,9 +58,9 @@ ha_service_topic = "homeassistant/service/switch/turn_on"
 client = mqtt.Client()
 client.username_pw_set(mqtt_username, mqtt_password)
 
-# For debugging - print received messages
+# Log received messages
 def on_message(client, userdata, message):
-    print(f"Received message on topic {message.topic}: {message.payload.decode()}")
+    logger.info(f"Received message on topic {message.topic}: {message.payload.decode()}")
 
 client.on_message = on_message
 
@@ -50,16 +68,17 @@ client.on_message = on_message
 def index():
     return render_template('index.html')
 
-@app.route('/mqtt-info')
-def mqtt_info():
-    return jsonify({
-        "host": mqtt_host,
-        "topic": mqtt_topic,
-        "zigbee_topic": zigbee_topic,
-        "ha_service_topic": ha_service_topic,
-        "device_name": device_name,
-        "entity": switch_entity
-    })
+# Disabled in production for security - only enable if needed for debugging
+# @app.route('/mqtt-info')
+# def mqtt_info():
+#     return jsonify({
+#         "host": mqtt_host,
+#         "topic": mqtt_topic,
+#         "zigbee_topic": zigbee_topic,
+#         "ha_service_topic": ha_service_topic,
+#         "device_name": device_name,
+#         "entity": switch_entity
+#     })
 
 @app.route('/open-door', methods=['POST'])
 def open_door():
@@ -79,7 +98,7 @@ def open_door():
         try:
             # For Zigbee2MQTT switches, typically use "state": "ON"
             zigbee_payload = json.dumps({"state": "ON"})
-            print(f"Publishing to {zigbee_topic}: {zigbee_payload}")
+            logger.info(f"Publishing to {zigbee_topic}: {zigbee_payload}")
             client.publish(zigbee_topic, zigbee_payload)
             success = True
         except Exception as e:
@@ -89,7 +108,7 @@ def open_door():
         if not success:
             try:
                 ha_payload = json.dumps({"entity_id": switch_entity})
-                print(f"Publishing to {ha_service_topic}: {ha_payload}")
+                logger.info(f"Publishing to {ha_service_topic}: {ha_payload}")
                 client.publish(ha_service_topic, ha_payload)
                 success = True
             except Exception as e:
@@ -110,4 +129,6 @@ def open_door():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # In production, debug should be False
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
