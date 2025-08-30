@@ -6,12 +6,11 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:5000:5000"  # Only expose to localhost for security
+      - "5000:5000"  # Only expose to localhost for security
     volumes:
       - ./config.ini:/app/config.ini:ro  # Read-only mount
     restart: unless-stopped
-    networks:
-      - dooropener_network
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/"]
       interval: 1m
@@ -29,7 +28,6 @@ services:
         limits:
           cpus: '0.50'
           memory: 256M
+    container_name: dooropener
+    
 
-networks:
-  dooropener_network:
-    driver: bridge
