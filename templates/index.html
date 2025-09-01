@@ -77,6 +77,10 @@
         <h1>Apartment Door Opener</h1>
         <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" style="margin-bottom: 1rem; padding: 10px; font-size: 18px; border-radius: 5px; border: 1px solid #ccc; width: 80%; max-width: 220px;">
         <button id="openDoorBtn" class="door-button">Open Door</button>
+        <div id="battery-container" style="position: absolute; top: 18px; right: 22px;">
+            <span id="battery-icon" style="font-size: 2rem; vertical-align: middle;">🔋</span>
+            <span id="battery-percentage" style="font-size: 1.2rem; vertical-align: middle;">--%</span>
+        </div>
         <div id="status" class="status"></div>
     </div>
 
@@ -99,10 +103,12 @@
                     },
                     body: JSON.stringify({ pin: pin })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        showStatus('Door opened successfully!', 'success');
+                .then(response => response.json().then(data => ({ status: response.status, data })))
+                .then(({ status, data }) => {
+                    if (status === 200 && data.status === 'success') {
+                        showStatus('Success: ' + data.message, 'success');
+                    } else if (status === 429) {
+                        showStatus('Error: ' + data.message, 'error', true); // persistent lockout message
                     } else {
                         showStatus('Error: ' + data.message, 'error');
                     }
@@ -120,16 +126,34 @@
                 });
             });
             
-            function showStatus(message, type) {
+            function showStatus(message, type, persistent) {
                 statusDiv.textContent = message;
                 statusDiv.className = 'status ' + type;
                 statusDiv.style.display = 'block';
-                
-                // Hide status message after 5 seconds
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
+                if (!persistent) {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
             }
+
+            function updateBatteryLevel(level) {
+                const batteryIcon = document.getElementById('battery-icon');
+                const batteryPercentage = document.getElementById('battery-percentage');
+                batteryPercentage.textContent = (level !== null && level !== undefined) ? `${level}%` : '--%';
+                if (level >= 80) batteryIcon.textContent = '🔋';
+                else if (level >= 50) batteryIcon.textContent = '🟩';
+                else if (level >= 20) batteryIcon.textContent = '🟨';
+                else if (level >= 0) batteryIcon.textContent = '🟥';
+                else batteryIcon.textContent = '🔋';
+            }
+
+            // Fetch battery on load
+            fetch('/battery').then(r=>r.json()).then(data=>{
+                updateBatteryLevel(data.level);
+            }).catch(()=>{
+                updateBatteryLevel(null);
+            });
         });
     </script>
 </body>

@@ -68,6 +68,38 @@ client.on_message = on_message
 def index():
     return render_template('index.html')
 
+@app.route('/battery')
+def battery():
+    import threading
+    result = {"level": None}
+    topic = f"zigbee2mqtt/{device_name}"
+    event = threading.Event()
+
+    def on_battery_message(client, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode())
+            if 'battery' in payload:
+                result["level"] = payload['battery']
+                event.set()
+        except Exception as e:
+            logger.warning(f"Failed to parse battery payload: {e}")
+            event.set()
+
+    temp_client = mqtt.Client()
+    temp_client.username_pw_set(mqtt_username, mqtt_password)
+    temp_client.on_message = on_battery_message
+    try:
+        temp_client.connect(mqtt_host, mqtt_port, 60)
+        temp_client.loop_start()
+        temp_client.subscribe(topic)
+        event.wait(timeout=3)
+    except Exception as e:
+        logger.warning(f"Could not fetch battery from Zigbee2MQTT: {e}")
+    finally:
+        temp_client.loop_stop()
+        temp_client.disconnect()
+    return jsonify({"level": result["level"]})
+
 # Disabled in production for security - only enable if needed for debugging
 # @app.route('/mqtt-info')
 # def mqtt_info():
