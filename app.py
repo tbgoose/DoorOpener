@@ -7,13 +7,15 @@ import logging
 from flask import Flask, render_template, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 import requests
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler()
+        logging.StreamHandler(),
+        logging.FileHandler(os.path.join(os.path.dirname(__file__), 'door_access.log'))
     ]
 )
 logger = logging.getLogger(__name__)
@@ -30,6 +32,9 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24))
 config = configparser.ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
 config.read(config_path)
+
+# Load per-user PINs from [pins] section
+user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
 
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
@@ -85,78 +90,85 @@ def open_door():
     try:
         global FAILED_ATTEMPTS, BLOCKED_UNTIL
         now = datetime.utcnow()
-        if BLOCKED_UNTIL and now < BLOCKED_UNTIL:
-            remaining = int((BLOCKED_UNTIL - now).total_seconds())
-            return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
+        client_ip = request.remote_addr
         data = request.get_json()
         pin_from_request = (data.get('pin').strip() if data and data.get('pin') else None)
-        pin_required = config.get('Security', 'pin', fallback=None)
-        
-        # Debug logging for PIN configuration
-        logger.info(f"PIN from request: {'***' if pin_from_request else 'None'}")
-        logger.info(f"PIN required from config: {'***' if pin_required else 'None'}")
-        if pin_required is not None:
-            pin_required = pin_required.strip()
-            if not pin_required:
-                return jsonify({"status": "error", "message": "PIN not set in config"}), 500
-            if not pin_from_request:
-                return jsonify({"status": "error", "message": "PIN required"}), 400
-            if pin_from_request != pin_required:
-                FAILED_ATTEMPTS += 1
-                if FAILED_ATTEMPTS >= MAX_ATTEMPTS:
-                    BLOCKED_UNTIL = now + BLOCK_TIME
-                    FAILED_ATTEMPTS = 0
-                    remaining = int((BLOCKED_UNTIL - now).total_seconds())
-                    return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
-                return jsonify({"status": "error", "message": "Invalid PIN"}), 403
-            else:
-                # Reset on success
+        matched_user = None
+        pin_valid = False
+        result = 'FAILURE'
+        reason = ''
+
+        # Brute-force protection (reuse existing logic)
+        if BLOCKED_UNTIL and now < BLOCKED_UNTIL:
+            remaining = int((BLOCKED_UNTIL - now).total_seconds())
+            logger.warning(f"Blocked attempt from {client_ip}: still blocked for {remaining}s")
+            return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
+
+        if not pin_from_request:
+            reason = 'PIN required'
+            logger.warning(f"PIN required but not provided from {client_ip}")
+            log_entry = f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}"
+            logger.info(log_entry)
+            return jsonify({"status": "error", "message": "PIN required"}), 400
+
+        # Check against per-user PINs
+        for user, user_pin in user_pins.items():
+            if pin_from_request == user_pin:
+                matched_user = user
+                pin_valid = True
+                break
+
+        if not pin_valid:
+            # Optionally, fallback to single PIN (legacy)
+            pin_required = config.get('Security', 'pin', fallback=None)
+            if pin_required and pin_from_request == pin_required.strip():
+                matched_user = 'LEGACY'
+                pin_valid = True
+
+        if not pin_valid:
+            FAILED_ATTEMPTS += 1
+            reason = 'Invalid PIN'
+            logger.warning(f"Invalid PIN attempt from {client_ip}, PIN: {pin_from_request}")
+            log_entry = f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}, PIN: {pin_from_request}"
+            logger.info(log_entry)
+            if FAILED_ATTEMPTS >= MAX_ATTEMPTS:
+                BLOCKED_UNTIL = now + BLOCK_TIME
                 FAILED_ATTEMPTS = 0
-                BLOCKED_UNTIL = None
+                remaining = int((BLOCKED_UNTIL - now).total_seconds())
+                return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
+            return jsonify({"status": "error", "message": "Invalid PIN"}), 403
         else:
-            return jsonify({"status": "error", "message": "PIN not set in config"}), 500
+            # Reset on success
+            FAILED_ATTEMPTS = 0
+            BLOCKED_UNTIL = None
+
         # Call Home Assistant API to turn on the switch
         try:
-            # Use the correct HA API endpoint format
             url = f"{ha_url}/api/services/switch/turn_on"
             payload = {"entity_id": switch_entity}
-            
-            logger.info(f"Calling HA API: {url}")
-            logger.info(f"Payload: {payload}")
-            logger.info(f"Headers: Authorization=Bearer *****, Content-Type={ha_headers.get('Content-Type')}")
-            
+            logger.info(f"Calling HA API: {url} for user: {matched_user}")
             response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
-            
-            logger.info(f"Response status: {response.status_code}")
-            logger.info(f"Response text: {response.text}")
-            
             if response.status_code == 200:
-                logger.info(f"Successfully sent door open command via HA API")
-                success = True
+                result = 'SUCCESS'
+                reason = 'Door opened'
+                log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - SUCCESS - {reason}"
+                logger.info(log_entry)
+                display_name = matched_user.capitalize() if matched_user else 'resident'
+                return jsonify({"status": "success", "message": f"Door open command sent.\nWelcome home, {display_name}!"})
             else:
-                logger.error(f"HA API call failed: {response.status_code} - {response.text}")
-                # Try alternative endpoint format
-                alt_url = f"{ha_url}/api/services/homeassistant/turn_on"
-                logger.info(f"Trying alternative endpoint: {alt_url}")
-                alt_response = requests.post(alt_url, headers=ha_headers, json=payload, timeout=10)
-                
-                if alt_response.status_code == 200:
-                    logger.info(f"Alternative endpoint succeeded")
-                    success = True
-                else:
-                    logger.error(f"Alternative endpoint also failed: {alt_response.status_code} - {alt_response.text}")
-                    error_messages = [f"Home Assistant API error: {response.status_code} (tried both switch/turn_on and homeassistant/turn_on)"]
-                    success = False
-                
+                result = 'FAILURE'
+                reason = f'HA API error: {response.status_code} - {response.text}'
+                log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}"
+                logger.error(log_entry)
+                return jsonify({"status": "error", "message": reason}), 500
         except Exception as e:
-            logger.error(f"Error calling Home Assistant API: {e}")
-            error_messages = [f"API call failed: {str(e)}"]
-            success = False
-        if success:
-            return jsonify({"status": "success", "message": "Door open command sent"})
-        else:
-            return jsonify({"status": "error", "message": "\n".join(error_messages)}), 500
+            result = 'FAILURE'
+            reason = f'API call failed: {str(e)}'
+            log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}"
+            logger.error(log_entry)
+            return jsonify({"status": "error", "message": reason}), 500
     except Exception as e:
+        logger.error(f"Exception in open_door: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
