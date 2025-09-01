@@ -80,9 +80,23 @@ def index():
 #         "entity": switch_entity
 #     })
 
+from datetime import datetime, timedelta
+from flask import request
+
+# Global brute-force protection settings
+FAILED_ATTEMPTS = 0
+BLOCKED_UNTIL = None
+MAX_ATTEMPTS = 5
+BLOCK_TIME = timedelta(minutes=5)
+
 @app.route('/open-door', methods=['POST'])
 def open_door():
     try:
+        global FAILED_ATTEMPTS, BLOCKED_UNTIL
+        now = datetime.utcnow()
+        if BLOCKED_UNTIL and now < BLOCKED_UNTIL:
+            remaining = int((BLOCKED_UNTIL - now).total_seconds())
+            return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
         data = request.get_json()
         pin_from_request = (data.get('pin').strip() if data and data.get('pin') else None)
         pin_required = config.get('Security', 'pin', fallback=None)
@@ -93,7 +107,17 @@ def open_door():
             if not pin_from_request:
                 return jsonify({"status": "error", "message": "PIN required"}), 400
             if pin_from_request != pin_required:
+                FAILED_ATTEMPTS += 1
+                if FAILED_ATTEMPTS >= MAX_ATTEMPTS:
+                    BLOCKED_UNTIL = now + BLOCK_TIME
+                    FAILED_ATTEMPTS = 0
+                    remaining = int((BLOCKED_UNTIL - now).total_seconds())
+                    return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
                 return jsonify({"status": "error", "message": "Invalid PIN"}), 403
+            else:
+                # Reset on success
+                FAILED_ATTEMPTS = 0
+                BLOCKED_UNTIL = None
         else:
             return jsonify({"status": "error", "message": "PIN not set in config"}), 500
         # Connect to MQTT broker
