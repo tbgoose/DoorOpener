@@ -1,61 +1,106 @@
-# Door Opener Web Application
+# 🚪 DoorOpener Web Portal
 
-A simple web application that allows neighbors to open the apartment building's downstairs door by triggering a Home Assistant switch via MQTT.
+A simple, secure, and modern web portal for triggering a Home Assistant switch—perfect for apartment, office, or shared entry doors. Features per-user PINs, audit logging, and an admin dashboard.
 
-## Features
+---
 
-- Clean, mobile-friendly web interface
-- MQTT integration with Home Assistant
-- Easy to deploy and configure
-- Docker support for containerized deployment
+## ⭐ Features
 
-## Setup Instructions
+- **Modern, mobile-friendly web UI**
+- **Home Assistant API integration** 
+- **Per-user PINs** for secure access
+- **Audit logging** with timestamp, user, and IP
+- **Brute-force protection**
+- **Docker support** for easy deployment
 
-### Standard Setup
+---
 
-1. Clone this repository
-2. Create a `config.ini` file based on the `config.ini.example` template:
-   ```
-   cp config.ini.example config.ini
-   ```
-3. Edit `config.ini` with your MQTT broker details and Home Assistant entity information
-4. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-5. Run the application:
-   ```
-   python app.py
-   ```
-6. Access the web interface at `http://your-server-ip:5000`
+## 🚀 Quick Start
 
-### Docker Setup
+### 1. Clone & Configure
+```bash
+# Clone the repository
+ git clone https://github.com/Sloth-on-meth/DoorOpener.git
+ cd DoorOpener
+# Copy and edit the config
+ cp config.ini.example config.ini
+# Edit config.ini with your Home Assistant info and PINs
+```
 
-1. Clone this repository
-2. Create a `config.ini` file based on the `config.ini.example` template:
-   ```
-   cp config.ini.example config.ini
-   ```
-3. Edit `config.ini` with your MQTT broker details and Home Assistant entity information
-4. Build and start the Docker container:
-   ```
-   docker-compose up -d
-   ```
-5. Access the web interface at `http://your-server-ip:5000`
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-## Configuration
+### 3. Run the App
+```bash
+python app.py
+```
+Visit [http://localhost:5000](http://localhost:5000) or your server IP.
 
-The `config.ini` file contains the following settings:
+### 4. Docker (Optional)
+```bash
+docker-compose up -d --force-recreate
+```
 
-- `[MQTT]` section:
-  - `host`: MQTT broker hostname or IP address
-  - `port`: MQTT broker port (default: 1883)
-  - `username`: MQTT username
-  - `password`: MQTT password
+---
 
-- `[HomeAssistant]` section:
-  - `switch_entity`: The entity ID of your door switch in Home Assistant
-  - `topic`: The MQTT topic to publish to (default: homeassistant/switch/door_opener/set)
+## ⚙️ Configuration Example (`config.ini`)
+```ini
+[HomeAssistant]
+url = http://your-ha-url:8123
+switch_entity = switch.dooropener_zigbee
+battery_entity = sensor.dooropener_zigbee_battery
+# Get a long-lived token from your Home Assistant profile
+# https://my.home-assistant.io/redirect/profile/
+token = YOUR_LONG_LIVED_TOKEN
+
+[pins]
+alice = 1234
+bob = 5678
+charlie = 9012
+
+
+```
+
+---
+
+## 🔑 Security & Logging
+- **Brute-force protection:** Too many failed PIN attempts blocks further tries for 5 minutes.
+- **Audit log:** All door open attempts (success/failure) are logged to `door_access.log` (timestamp, user, IP, result).
+- **PINs:** Each resident/user gets their own PIN. Legacy single-PIN mode is also supported.
+- **Production:** By default, debug mode is off unless `FLASK_DEBUG=true` is set in the environment.
+
+---
+
+## 🛠️ Endpoints
+- `/` — Main web UI
+- `/open-door` — POST endpoint for opening the door (requires PIN)
+- `/battery` — Shows battery level of the door device
+
+---
+
+## 🏗️ Docker Deployment
+- `Dockerfile` and `docker-compose.yml` provided
+- Standard commands:
+  ```bash
+  docker-compose up -d --force-recreate
+  docker-compose logs -f
+  docker-compose down
+  docker-compose build
+  ```
+
+---
+
+## 📝 License & Credits
+MIT License. Contributions welcome!
+
+---
+
+## 💡 Tips
+- Always use HTTPS if exposing to the internet.
+- Restrict access to the admin panel via reverse proxy/firewall.
+- For more advanced logging or user management, contributions are welcome!
 
 ## Security Considerations
 
