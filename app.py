@@ -35,6 +35,7 @@ config.read(config_path)
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
 ha_token = config.get('HomeAssistant', 'token')
 switch_entity = config.get('HomeAssistant', 'switch_entity')
+battery_entity = config.get('HomeAssistant', 'battery_entity', fallback=f'sensor.{switch_entity.split(".")[1]}_battery')
 
 # Extract device name from switch entity (e.g., switch.dooropener_zigbee -> dooropener_zigbee)
 device_name = switch_entity.split('.')[1] if '.' in switch_entity else switch_entity
@@ -51,32 +52,20 @@ def index():
 
 @app.route('/battery')
 def battery():
-    """Get battery level from Home Assistant device state"""
+    """Get battery level from Home Assistant battery sensor entity"""
     try:
-        logger.info(f"Battery endpoint called - fetching state for entity: {switch_entity}")
-        
-        # Get device state from Home Assistant
-        url = f"{ha_url}/api/states/{switch_entity}"
+        logger.info(f"Battery endpoint called - fetching state for entity: {battery_entity}")
+        url = f"{ha_url}/api/states/{battery_entity}"
         response = requests.get(url, headers=ha_headers, timeout=10)
-        
         if response.status_code == 200:
             state_data = response.json()
-            attributes = state_data.get('attributes', {})
-            
-            # Look for battery level in attributes
-            battery_level = attributes.get('battery_level') or attributes.get('battery')
-            
-            if battery_level is not None:
-                logger.info(f"Found battery level: {battery_level}%")
-                return jsonify({"level": battery_level})
-            else:
-                logger.warning(f"No battery data found in entity attributes: {list(attributes.keys())}")
-                return jsonify({"level": None})
+            battery_level = state_data.get('state')
+            return jsonify({"level": battery_level})
         else:
-            logger.error(f"Failed to get entity state: {response.status_code} - {response.text}")
+            logger.error(f"Failed to fetch battery state: {response.status_code} {response.text}")
             return jsonify({"level": None})
-            
     except Exception as e:
+        logger.error(f"Exception fetching battery: {e}")
         logger.error(f"Error fetching battery from Home Assistant: {e}")
         return jsonify({"level": None})
 
