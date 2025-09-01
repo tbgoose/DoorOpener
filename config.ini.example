@@ -11,3 +11,6 @@ alice = 1234
 bob = 5678
 charlie = 9012  # Set your door opener PIN here
 
+[admin]
+admin_password = changeme123
+

@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 import requests
 from datetime import datetime
+import secrets
 
 # Configure logging
 logging.basicConfig(
@@ -170,6 +171,45 @@ def open_door():
     except Exception as e:
         logger.error(f"Exception in open_door: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- Admin panel endpoints ---
+from flask import send_from_directory
+admin_password = config.get('admin', 'admin_password', fallback=None)
+admin_tokens = set()
+
+@app.route('/admin')
+def admin_panel():
+    return render_template('admin.html')
+
+@app.route('/admin-login', methods=['POST'])
+def admin_login():
+    data = request.get_json()
+    pwd = data.get('password') if data else None
+    if not admin_password or not pwd or pwd != admin_password:
+        return jsonify({'status': 'error', 'message': 'Invalid admin password'}), 403
+    token = secrets.token_urlsafe(32)
+    admin_tokens.add(token)
+    return jsonify({'status': 'success', 'token': token})
+
+@app.route('/admin-logs')
+def admin_logs():
+    token = request.args.get('token')
+    if not token or token not in admin_tokens:
+        return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+    # Parse door_access.log for per-user counts
+    log_path = os.path.join(os.path.dirname(__file__), 'door_access.log')
+    user_counts = {}
+    try:
+        with open(log_path, 'r') as f:
+            for line in f:
+                # Example: 2025-09-01T12:54:00 - 192.168.1.51 - alice - SUCCESS - Door opened
+                parts = line.strip().split(' - ')
+                if len(parts) >= 4 and parts[3] == 'SUCCESS':
+                    user = parts[2]
+                    user_counts[user] = user_counts.get(user, 0) + 1
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Log read error: {e}'}), 500
+    return jsonify({'logs': user_counts})
 
 if __name__ == '__main__':
     # In production, debug should be False
