@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import os
 import configparser
-import paho.mqtt.client as mqtt
 import json
 import time
 import logging
 from flask import Flask, render_template, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
+import requests
 
 # Configure logging
 logging.basicConfig(
@@ -29,40 +29,21 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24))
 # Load configuration
 config = configparser.ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
-
-if not os.path.exists(config_path):
-    raise FileNotFoundError(f"Config file not found at {config_path}. Please create it based on config.ini.example")
-
 config.read(config_path)
 
-# MQTT Configuration
-mqtt_host = config['MQTT']['host']
-mqtt_port = int(config['MQTT']['port'])
-mqtt_username = config['MQTT']['username']
-mqtt_password = config['MQTT']['password']
+# Home Assistant Configuration
+ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
+ha_token = config.get('HomeAssistant', 'token')
+switch_entity = config.get('HomeAssistant', 'switch_entity')
 
-# Get switch entity and extract device name for Zigbee2MQTT
-switch_entity = config['HomeAssistant']['switch_entity']
+# Extract device name from switch entity (e.g., switch.dooropener_zigbee -> dooropener_zigbee)
 device_name = switch_entity.split('.')[1] if '.' in switch_entity else switch_entity
 
-# For Zigbee2MQTT, the topic is typically zigbee2mqtt/DEVICE_NAME/set
-zigbee_topic = f"zigbee2mqtt/{device_name}/set"
-
-# Use configured topic or fallback to zigbee topic
-mqtt_topic = config.get('HomeAssistant', 'topic', fallback=zigbee_topic)
-
-# For direct Home Assistant service calls
-ha_service_topic = "homeassistant/service/switch/turn_on"
-
-# Initialize MQTT client
-client = mqtt.Client()
-client.username_pw_set(mqtt_username, mqtt_password)
-
-# Log received messages
-def on_message(client, userdata, message):
-    logger.info(f"Received message on topic {message.topic}: {message.payload.decode()}")
-
-client.on_message = on_message
+# Headers for HA API requests
+ha_headers = {
+    'Authorization': f'Bearer {ha_token}',
+    'Content-Type': 'application/json'
+}
 
 @app.route('/')
 def index():
@@ -70,48 +51,37 @@ def index():
 
 @app.route('/battery')
 def battery():
-    import threading
-    result = {"level": None}
-    topic = f"zigbee2mqtt/{device_name}"
-    event = threading.Event()
-
-    def on_battery_message(client, userdata, msg):
-        try:
-            payload = json.loads(msg.payload.decode())
-            if 'battery' in payload:
-                result["level"] = payload['battery']
-                event.set()
-        except Exception as e:
-            logger.warning(f"Failed to parse battery payload: {e}")
-            event.set()
-
-    temp_client = mqtt.Client()
-    temp_client.username_pw_set(mqtt_username, mqtt_password)
-    temp_client.on_message = on_battery_message
+    """Get battery level from Home Assistant device state"""
     try:
-        temp_client.connect(mqtt_host, mqtt_port, 60)
-        temp_client.loop_start()
-        temp_client.subscribe(topic)
-        event.wait(timeout=3)
+        logger.info(f"Battery endpoint called - fetching state for entity: {switch_entity}")
+        
+        # Get device state from Home Assistant
+        url = f"{ha_url}/api/states/{switch_entity}"
+        response = requests.get(url, headers=ha_headers, timeout=10)
+        
+        if response.status_code == 200:
+            state_data = response.json()
+            attributes = state_data.get('attributes', {})
+            
+            # Look for battery level in attributes
+            battery_level = attributes.get('battery_level') or attributes.get('battery')
+            
+            if battery_level is not None:
+                logger.info(f"Found battery level: {battery_level}%")
+                return jsonify({"level": battery_level})
+            else:
+                logger.warning(f"No battery data found in entity attributes: {list(attributes.keys())}")
+                return jsonify({"level": None})
+        else:
+            logger.error(f"Failed to get entity state: {response.status_code} - {response.text}")
+            return jsonify({"level": None})
+            
     except Exception as e:
-        logger.warning(f"Could not fetch battery from Zigbee2MQTT: {e}")
-    finally:
-        temp_client.loop_stop()
-        temp_client.disconnect()
-    return jsonify({"level": result["level"]})
+        logger.error(f"Error fetching battery from Home Assistant: {e}")
+        return jsonify({"level": None})
 
-# Disabled in production for security - only enable if needed for debugging
-# @app.route('/mqtt-info')
-# def mqtt_info():
-#     return jsonify({
-#         "host": mqtt_host,
-#         "topic": mqtt_topic,
-#         "zigbee_topic": zigbee_topic,
-#         "ha_service_topic": ha_service_topic,
-#         "device_name": device_name,
-#         "entity": switch_entity
-#     })
 
+import time
 from datetime import datetime, timedelta
 from flask import request
 
@@ -132,6 +102,10 @@ def open_door():
         data = request.get_json()
         pin_from_request = (data.get('pin').strip() if data and data.get('pin') else None)
         pin_required = config.get('Security', 'pin', fallback=None)
+        
+        # Debug logging for PIN configuration
+        logger.info(f"PIN from request: {'***' if pin_from_request else 'None'}")
+        logger.info(f"PIN required from config: {'***' if pin_required else 'None'}")
         if pin_required is not None:
             pin_required = pin_required.strip()
             if not pin_required:
@@ -152,37 +126,43 @@ def open_door():
                 BLOCKED_UNTIL = None
         else:
             return jsonify({"status": "error", "message": "PIN not set in config"}), 500
-        # Connect to MQTT broker
-        client.connect(mqtt_host, mqtt_port, 60)
-        client.loop_start()
-        # Subscribe to topics for debugging
-        client.subscribe(f"zigbee2mqtt/{device_name}/#")
-        # Try different approaches to trigger the door switch
-        success = False
-        error_messages = []
-        # Approach 1: Direct Zigbee2MQTT command
+        # Call Home Assistant API to turn on the switch
         try:
-            # For Zigbee2MQTT switches, typically use "state": "ON"
-            zigbee_payload = json.dumps({"state": "ON"})
-            logger.info(f"Publishing to {zigbee_topic}: {zigbee_payload}")
-            client.publish(zigbee_topic, zigbee_payload)
-            success = True
-        except Exception as e:
-            error_messages.append(f"Zigbee approach failed: {str(e)}")
-        # Approach 2: Home Assistant service call
-        if not success:
-            try:
-                ha_payload = json.dumps({"entity_id": switch_entity})
-                logger.info(f"Publishing to {ha_service_topic}: {ha_payload}")
-                client.publish(ha_service_topic, ha_payload)
+            # Use the correct HA API endpoint format
+            url = f"{ha_url}/api/services/switch/turn_on"
+            payload = {"entity_id": switch_entity}
+            
+            logger.info(f"Calling HA API: {url}")
+            logger.info(f"Payload: {payload}")
+            logger.info(f"Headers: Authorization=Bearer *****, Content-Type={ha_headers.get('Content-Type')}")
+            
+            response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
+            
+            logger.info(f"Response status: {response.status_code}")
+            logger.info(f"Response text: {response.text}")
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully sent door open command via HA API")
                 success = True
-            except Exception as e:
-                error_messages.append(f"HA service approach failed: {str(e)}")
-        # Wait briefly to capture any responses
-        time.sleep(1)
-        # Disconnect from MQTT broker
-        client.loop_stop()
-        client.disconnect()
+            else:
+                logger.error(f"HA API call failed: {response.status_code} - {response.text}")
+                # Try alternative endpoint format
+                alt_url = f"{ha_url}/api/services/homeassistant/turn_on"
+                logger.info(f"Trying alternative endpoint: {alt_url}")
+                alt_response = requests.post(alt_url, headers=ha_headers, json=payload, timeout=10)
+                
+                if alt_response.status_code == 200:
+                    logger.info(f"Alternative endpoint succeeded")
+                    success = True
+                else:
+                    logger.error(f"Alternative endpoint also failed: {alt_response.status_code} - {alt_response.text}")
+                    error_messages = [f"Home Assistant API error: {response.status_code} (tried both switch/turn_on and homeassistant/turn_on)"]
+                    success = False
+                
+        except Exception as e:
+            logger.error(f"Error calling Home Assistant API: {e}")
+            error_messages = [f"API call failed: {str(e)}"]
+            success = False
         if success:
             return jsonify({"status": "success", "message": "Door open command sent"})
         else:

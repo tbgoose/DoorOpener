@@ -1,12 +1,10 @@
-[MQTT]
-host = 192.168.178.79
-port = 1883
-username = your_mqtt_username
-password = your_mqtt_password
-
 [HomeAssistant]
-switch_entity = switch.your_door_switch_entity_id
-topic = homeassistant/switch/door_opener/set
+# Home Assistant URL (include http:// or https://)
+url = http://homeassistant.local:8123
+# Long-lived access token from HA (Profile -> Security -> Long-lived access tokens)
+token = your_long_lived_access_token_here
+# Switch entity ID for your door opener
+switch_entity = switch.dooropener_zigbee
 
 [Security]
 # pin = 1234  # Set your door opener PIN here
