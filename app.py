@@ -58,7 +58,7 @@ ha_headers = {
 }
 
 # --- Brute-force Protection ---
-FAILED_ATTEMPTS = 0
+FAILED_ATTEMPTS = 3
 BLOCKED_UNTIL = None
 MAX_ATTEMPTS = 5
 BLOCK_TIME = timedelta(minutes=5)
