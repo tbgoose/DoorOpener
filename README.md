@@ -92,5 +92,5 @@ The application includes Docker support for easy deployment:
 - Rebuild after changes:
   ```
   docker-compose build
-  docker-compose up -d
+  docker-compose up -d --force-recreate
   ```

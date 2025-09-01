@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+DoorOpener Web Portal
+---------------------
+A simple Flask web app to open a door via Home Assistant API, with per-user PINs and admin logging.
+"""
 import os
 import configparser
 import json
@@ -7,8 +12,50 @@ import logging
 from flask import Flask, render_template, request, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
+
+# --- Logging Setup ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(os.path.join(os.path.dirname(__file__), 'door_access.log'))
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# --- Flask App Setup ---
+app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)  # Reverse proxy support
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', os.urandom(24))  # Session/CSRF protection
+
+# --- Configuration ---
+config = configparser.ConfigParser()
+config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
+config.read(config_path)
+
+# Per-user PINs from [pins] section (user: pin)
+user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
+
+# Home Assistant API config
+ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
+ha_token = config.get('HomeAssistant', 'token')
+switch_entity = config.get('HomeAssistant', 'switch_entity')
+battery_entity = config.get('HomeAssistant', 'battery_entity', fallback=f'sensor.{switch_entity.split(".")[1]}_battery')
+
+# HTTP headers for HA API requests
+ha_headers = {
+    'Authorization': f'Bearer {ha_token}',
+    'Content-Type': 'application/json'
+}
+
+# --- Brute-force Protection ---
+FAILED_ATTEMPTS = 0
+BLOCKED_UNTIL = None
+MAX_ATTEMPTS = 5
+BLOCK_TIME = timedelta(minutes=5)
 
 # Configure logging
 logging.basicConfig(
