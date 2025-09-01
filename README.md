@@ -1,5 +1,14 @@
 # 🚪 DoorOpener Web Portal
 
+<p align="center">
+  <a href="https://github.com/Sloth-on-meth/DoorOpener/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/Sloth-on-meth/DoorOpener?style=for-the-badge" alt="License">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.8%2B-blue?style=for-the-badge" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/docker-ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
+</p>
+
 A simple, secure, and modern web portal for triggering a Home Assistant switch—perfect for apartment, office, or shared entry doors. Features per-user PINs, audit logging, and an admin dashboard.
 
 ---
