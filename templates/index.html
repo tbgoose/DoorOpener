@@ -15,6 +15,38 @@
             background-color: #f5f5f5;
         }
         .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .input-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .door-input {
+            flex: 1 1 auto;
+        }
+        @media (max-width: 480px) {
+            .input-row {
+                flex-direction: row;
+                width: 100%;
+            }
+            .door-input {
+                font-size: 20px;
+                padding: 12px 6px;
+                width: 100%;
+                max-width: 110px;
+            }
+            .door-button {
+                font-size: 18px;
+                padding: 12px 20px;
+                margin-left: 8px;
+            }
+        }
+        .container {
             text-align: center;
             padding: 2rem;
             background-color: white;
@@ -70,12 +102,30 @@
                 font-size: 20px;
             }
         }
+        .door-button.error-btn {
+            background-color: #c0392b !important;
+            color: #fff !important;
+            border: none;
+            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .door-button.success-btn {
+            background-color: #27ae60 !important;
+            color: #fff !important;
+            border: none;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translateX(-2px); }
+            20%, 80% { transform: translateX(4px); }
+            30%, 50%, 70% { transform: translateX(-8px); }
+            40%, 60% { transform: translateX(8px); }
+            100% { transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Rijnmond Deuropener</h1>
-        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" style="margin-bottom: 1rem; padding: 10px; font-size: 18px; border-radius: 5px; border: 1px solid #ccc; width: 80%; max-width: 220px;">
+        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" inputmode="numeric" pattern="[0-9]*" style="margin-bottom: 1rem; padding: 10px; font-size: 18px; border-radius: 5px; border: 1px solid #ccc; width: 80%; max-width: 220px;">
         <button id="openDoorBtn" class="door-button">Open Door</button>
         <div id="battery-container" style="position: absolute; top: 18px; right: 22px;">
             <span id="battery-icon" style="font-size: 2rem; vertical-align: middle;">🔋</span>
@@ -93,6 +143,7 @@
                 // Disable button to prevent multiple clicks
                 openDoorBtn.disabled = true;
                 openDoorBtn.textContent = 'Opening...';
+                openDoorBtn.classList.remove('error-btn', 'success-btn');
                 
                 // Send request to open door
                 const pin = document.getElementById('pinInput').value;
@@ -107,10 +158,21 @@
                 .then(({ status, data }) => {
                     if (status === 200 && data.status === 'success') {
                         showStatus('Success: ' + data.message, 'success');
-                    } else if (status === 429) {
-                        showStatus('Error: ' + data.message, 'error', true); // persistent lockout message
+                        openDoorBtn.classList.remove('error-btn');
+                        openDoorBtn.classList.add('success-btn');
+                        openDoorBtn.textContent = '✓';
+                        if (window.navigator.vibrate) window.navigator.vibrate([80, 60, 80]); // Two short bzzts
                     } else {
+                        // Error (invalid PIN, blocked, etc)
                         showStatus('Error: ' + data.message, 'error');
+                        openDoorBtn.classList.remove('success-btn');
+                        openDoorBtn.classList.add('error-btn');
+                        openDoorBtn.textContent = '✗';
+                        if (window.navigator.vibrate) window.navigator.vibrate([120]); // Single bzzzt
+                        // Visually shake
+                        openDoorBtn.classList.remove('shake');
+                        void openDoorBtn.offsetWidth; // force reflow
+                        openDoorBtn.classList.add('shake');
                     }
                 })
                 .catch(error => {
@@ -122,7 +184,8 @@
                     setTimeout(() => {
                         openDoorBtn.disabled = false;
                         openDoorBtn.textContent = 'Open Door';
-                    }, 3000);
+                        openDoorBtn.classList.remove('error-btn', 'success-btn', 'shake');
+                    }, 1200);
                 });
             });
             
