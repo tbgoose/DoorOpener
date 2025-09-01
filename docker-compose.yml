@@ -9,6 +9,7 @@ services:
       - "5000:5000"  # Only expose to localhost for security
     volumes:
       - ./config.ini:/app/config.ini:ro  # Read-only mount
+      - ./logs:/app/logs
     restart: unless-stopped
 
     healthcheck:

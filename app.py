@@ -15,16 +15,22 @@ import requests
 from datetime import datetime, timedelta
 import secrets
 
-# --- Logging Setup ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(os.path.join(os.path.dirname(__file__), 'door_access.log'))
-    ]
-)
-logger = logging.getLogger(__name__)
+# --- Logging Setup (door attempts only) ---
+import pathlib
+log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+# Ensure the logs directory exists before creating the handler
+try:
+    os.makedirs(log_dir, exist_ok=True)
+except Exception as e:
+    print(f'Could not create log directory: {e}')
+log_path = os.path.join(log_dir, 'log.txt')
+
+# We'll use a dedicated logger for door attempts only
+attempt_logger = logging.getLogger('door_attempts')
+attempt_logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler(log_path)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+attempt_logger.handlers = [file_handler]
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -149,14 +155,12 @@ def open_door():
         # Brute-force protection (reuse existing logic)
         if BLOCKED_UNTIL and now < BLOCKED_UNTIL:
             remaining = int((BLOCKED_UNTIL - now).total_seconds())
-            logger.warning(f"Blocked attempt from {client_ip}: still blocked for {remaining}s")
+            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - Blocked: still blocked for {remaining}s")
             return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
 
         if not pin_from_request:
             reason = 'PIN required'
-            logger.warning(f"PIN required but not provided from {client_ip}")
-            log_entry = f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}"
-            logger.info(log_entry)
+            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}")
             return jsonify({"status": "error", "message": "PIN required"}), 400
 
         # Check against per-user PINs
@@ -176,13 +180,12 @@ def open_door():
         if not pin_valid:
             FAILED_ATTEMPTS += 1
             reason = 'Invalid PIN'
-            logger.warning(f"Invalid PIN attempt from {client_ip}, PIN: {pin_from_request}")
-            log_entry = f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}, PIN: {pin_from_request}"
-            logger.info(log_entry)
+            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}, PIN: {pin_from_request}")
             if FAILED_ATTEMPTS >= MAX_ATTEMPTS:
                 BLOCKED_UNTIL = now + BLOCK_TIME
                 FAILED_ATTEMPTS = 0
                 remaining = int((BLOCKED_UNTIL - now).total_seconds())
+                attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - Blocked: too many failed attempts")
                 return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
             return jsonify({"status": "error", "message": "Invalid PIN"}), 403
         else:
@@ -194,29 +197,25 @@ def open_door():
         try:
             url = f"{ha_url}/api/services/switch/turn_on"
             payload = {"entity_id": switch_entity}
-            logger.info(f"Calling HA API: {url} for user: {matched_user}")
             response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
             if response.status_code == 200:
                 result = 'SUCCESS'
                 reason = 'Door opened'
-                log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - SUCCESS - {reason}"
-                logger.info(log_entry)
+                attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - SUCCESS - {reason}")
                 display_name = matched_user.capitalize() if matched_user else 'resident'
                 return jsonify({"status": "success", "message": f"Door open command sent.\nWelcome home, {display_name}!"})
             else:
                 result = 'FAILURE'
                 reason = f'HA API error: {response.status_code} - {response.text}'
-                log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}"
-                logger.error(log_entry)
+                attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}")
                 return jsonify({"status": "error", "message": reason}), 500
         except Exception as e:
             result = 'FAILURE'
             reason = f'API call failed: {str(e)}'
-            log_entry = f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}"
-            logger.error(log_entry)
+            attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}")
             return jsonify({"status": "error", "message": reason}), 500
     except Exception as e:
-        logger.error(f"Exception in open_door: {e}")
+        attempt_logger.info(f"{datetime.utcnow().isoformat()} - UNKNOWN - UNKNOWN - FAILURE - Exception in open_door: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # --- Admin panel endpoints ---

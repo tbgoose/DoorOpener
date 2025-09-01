@@ -73,7 +73,7 @@ charlie = 9012
 
 ## 🔑 Security & Logging
 - **Brute-force protection:** Too many failed PIN attempts blocks further tries for 5 minutes.
-- **Audit log:** All door open attempts (success/failure) are logged to `door_access.log` (timestamp, user, IP, result).
+- **Audit log:** All door open attempts (success/failure) are logged to `logs/log.txt` (timestamp, user, IP, result). This file is accessible on the host if you mount the `logs/` directory via Docker.
 - **PINs:** Each resident/user gets their own PIN. Legacy single-PIN mode is also supported.
 - **Production:** By default, debug mode is off unless `FLASK_DEBUG=true` is set in the environment.
 
@@ -88,6 +88,15 @@ charlie = 9012
 
 ## 🏗️ Docker Deployment
 - `Dockerfile` and `docker-compose.yml` provided
+- To access logs on your host, add this to your `docker-compose.yml`:
+  ```yaml
+  services:
+    dooropener:
+      ...
+      volumes:
+        - ./logs:/docker/DoorOpener/logs
+  ```
+  This will make all logs available at `./logs/log.txt` on your host.
 - Standard commands:
   ```bash
   docker-compose up -d --force-recreate
