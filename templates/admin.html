@@ -166,13 +166,22 @@
                 <input type="password" id="adminPassword" placeholder="Admin Password" 
                        style="padding: 14px 18px; font-size: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); width: 80%; max-width: 240px; color: rgba(0,0,0,0.8); font-weight: 500; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem;">
                 <br>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 14px; color: rgba(0,0,0,0.7);">
+                        <input type="checkbox" id="rememberMe" style="width: auto;">
+                        Remember me for 30 days
+                    </label>
+                </div>
                 <button onclick="login()" style="padding: 12px 24px; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">Login</button>
             </div>
             <div id="loginError" style="color: #c62828; margin-top: 1rem; display: none;"></div>
         </div>
 
         <div id="dashboard" style="display: none;">
-            <h1>🔐 Admin Dashboard</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>🔐 Admin Dashboard</h1>
+                <button onclick="logout()" style="padding: 8px 16px; background: linear-gradient(135deg, #f44336, #d32f2f); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">Logout</button>
+            </div>
             
             <div class="controls">
             <div class="control-group">
@@ -229,6 +238,7 @@
 
         function login() {
             const password = document.getElementById('adminPassword').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
             const errorDiv = document.getElementById('loginError');
             
             fetch('/admin/auth', {
@@ -236,7 +246,10 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ password: password })
+                body: JSON.stringify({ 
+                    password: password,
+                    remember_me: rememberMe
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -256,8 +269,48 @@
             });
         }
 
+        // Check if already authenticated on page load
+        function checkAuthentication() {
+            fetch('/admin/check-auth')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        isAuthenticated = true;
+                        document.getElementById('loginForm').style.display = 'none';
+                        document.getElementById('dashboard').style.display = 'block';
+                        loadLogs();
+                    }
+                })
+                .catch(error => {
+                    console.log('Not authenticated or error checking auth');
+                });
+        }
+
+        function logout() {
+            fetch('/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                isAuthenticated = false;
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('rememberMe').checked = false;
+            })
+            .catch(error => {
+                console.error('Error logging out:', error);
+            });
+        }
+
         // Allow Enter key to login
         document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication on page load
+            checkAuthentication();
+            
             document.getElementById('adminPassword').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     login();

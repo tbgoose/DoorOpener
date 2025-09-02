@@ -37,6 +37,14 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
 
+# Configure secure session cookies
+app.config.update(
+    SESSION_COOKIE_SECURE=True,  # Only send over HTTPS (reverse proxy handles this)
+    SESSION_COOKIE_HTTPONLY=True,  # Prevent XSS access to cookies
+    SESSION_COOKIE_SAMESITE='Lax',  # CSRF protection
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30)  # Default permanent session duration
+)
+
 # --- Configuration ---
 config = configparser.ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
@@ -305,15 +313,52 @@ def admin():
 def admin_auth():
     data = request.get_json()
     password = data.get('password', '').strip() if data else ''
+    remember_me = data.get('remember_me', False) if data else False
+    
     if password == admin_password:
         session['admin_authenticated'] = True
+        session['admin_login_time'] = datetime.utcnow().isoformat()
+        
+        # Set session to be permanent if remember_me is checked
+        if remember_me:
+            session.permanent = True
+            # Set cookie to expire in 30 days
+            app.permanent_session_lifetime = timedelta(days=30)
+        else:
+            session.permanent = False
+            # Session expires when browser closes
+            
         return jsonify({"status": "success"})
     else:
         return jsonify({"status": "error", "message": "Invalid admin password"}), 403
 
+@app.route('/admin/check-auth', methods=['GET'])
+def admin_check_auth():
+    """Check if admin is currently authenticated"""
+    if session.get('admin_authenticated'):
+        login_time = session.get('admin_login_time')
+        return jsonify({
+            "authenticated": True, 
+            "login_time": login_time
+        })
+    else:
+        return jsonify({"authenticated": False})
+
+@app.route('/admin/logout', methods=['POST'])
+def admin_logout():
+    """Logout admin user"""
+    session.pop('admin_authenticated', None)
+    session.pop('admin_login_time', None)
+    session.permanent = False
+    return jsonify({"status": "success", "message": "Logged out successfully"})
+
 @app.route('/admin/logs')
 def admin_logs():
     """Get parsed log data for admin dashboard"""
+    # Check if admin is authenticated
+    if not session.get('admin_authenticated'):
+        return jsonify({"error": "Authentication required"}), 401
+        
     try:
         logs = []
         log_path = os.path.join(os.path.dirname(__file__), 'logs', 'log.txt')
