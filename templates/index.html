@@ -251,9 +251,32 @@
 <body>
     <div class="container">
         <h1>Deuropener</h1>
-        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" inputmode="numeric" pattern="[0-9]*" style="margin-bottom: 1.5rem; padding: 14px 18px; font-size: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); width: 80%; max-width: 240px; color: rgba(0,0,0,0.8); font-weight: 500; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-        <button id="openDoorBtn" class="door-button">Open Door</button>
-        <div id="battery-container" style="position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.25); border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); z-index: 10;">
+            <!-- PIN Display -->
+            <div id="pinDisplay" style="width: 100%; padding: 14px 18px; font-size: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); color: rgba(0,0,0,0.8); font-weight: 600; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; text-align: center; min-height: 28px; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                <!-- PIN dots will appear here -->
+            </div>
+            
+            <!-- Keypad -->
+            <div class="keypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; max-width: 280px; margin-left: auto; margin-right: auto;">
+                <button class="keypad-btn" onclick="addDigit('1')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">1</button>
+                <button class="keypad-btn" onclick="addDigit('2')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">2</button>
+                <button class="keypad-btn" onclick="addDigit('3')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">3</button>
+                <button class="keypad-btn" onclick="addDigit('4')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">4</button>
+                <button class="keypad-btn" onclick="addDigit('5')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">5</button>
+                <button class="keypad-btn" onclick="addDigit('6')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">6</button>
+                <button class="keypad-btn" onclick="addDigit('7')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">7</button>
+                <button class="keypad-btn" onclick="addDigit('8')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">8</button>
+                <button class="keypad-btn" onclick="addDigit('9')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">9</button>
+                <button class="keypad-btn" onclick="clearPin()" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 16px; font-weight: 600; color: rgba(220,20,60,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">⌫</button>
+                <button class="keypad-btn" onclick="addDigit('0')" style="padding: 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 20px; font-weight: 600; color: rgba(0,0,0,0.8); cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">0</button>
+                <button class="keypad-btn" onclick="openDoor()" style="padding: 16px; background: linear-gradient(135deg, #4CAF50, #45a049); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(10px);">✓</button>
+            </div>
+            
+            <button id="openDoorBtn" onclick="openDoor()" 
+                    style="width: 100%; padding: 16px; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+                Open Door
+            </button>
+            <div id="battery-container" style="position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.25); border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); z-index: 10;">
             <div id="battery-icon" style="width: 20px; height: 10px; border: 1px solid rgba(0,0,0,0.5); border-radius: 1px; position: relative; background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);">
                 <div style="position: absolute; right: -3px; top: 1px; width: 1.5px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 0 1px 1px 0;"></div>
             </div>
@@ -271,107 +294,157 @@
     </a>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const openDoorBtn = document.getElementById('openDoorBtn');
-            const statusDiv = document.getElementById('status');
-            
-            openDoorBtn.addEventListener('click', function() {
-                // Disable button to prevent multiple clicks
-                openDoorBtn.disabled = true;
-                openDoorBtn.textContent = 'Opening...';
-                openDoorBtn.classList.remove('error-btn', 'success-btn');
+        let batteryLevel = null;
+        let currentPin = '';
+        
+        function addDigit(digit) {
+            if (currentPin.length < 8) {
+                currentPin += digit;
+                updatePinDisplay();
                 
-                // Send request to open door
-                const pin = document.getElementById('pinInput').value;
-                fetch('/open-door', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ pin: pin })
-                })
-                .then(response => response.json().then(data => ({ status: response.status, data })))
-                .then(({ status, data }) => {
-                    if (status === 200 && data.status === 'success') {
-                        showStatus('Success: ' + data.message, 'success');
-                        openDoorBtn.classList.remove('error-btn');
-                        openDoorBtn.classList.add('success-btn');
-                        openDoorBtn.textContent = '✓';
-                        
-                        // Play success sound and fancy vibration
-                        playSuccessSound();
-                        if (window.navigator.vibrate) {
-                            // Fancy "ta-da" vibration pattern: short-long-short with crescendo
-                            window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
-                        }
-                    } else {
-                        // Error (invalid PIN, blocked, etc)
-                        showStatus('Error: ' + data.message, 'error');
-                        openDoorBtn.classList.remove('success-btn');
-                        openDoorBtn.classList.add('error-btn');
-                        openDoorBtn.textContent = '✗';
-                        if (window.navigator.vibrate) window.navigator.vibrate([120]); // Single bzzzt
-                        // Visually shake
-                        openDoorBtn.classList.remove('shake');
-                        void openDoorBtn.offsetWidth; // force reflow
-                        openDoorBtn.classList.add('shake');
+                // Haptic feedback
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(50);
+                }
+            }
+        }
+        
+        function clearPin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+                
+                // Haptic feedback
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(30);
+                }
+            }
+        }
+        
+        function updatePinDisplay() {
+            const display = document.getElementById('pinDisplay');
+            if (currentPin.length === 0) {
+                display.innerHTML = '<span style="color: rgba(0,0,0,0.4);">Enter PIN</span>';
+            } else {
+                display.textContent = '●'.repeat(currentPin.length);
+            }
+        }
+        
+        function openDoor() {
+            const pin = currentPin;
+            const openDoorBtn = document.getElementById('openDoorBtn');
+            
+            if (!pin) {
+                showStatus('Please enter a PIN', 'error');
+                return;
+            }
+            
+            // Send request to open door
+            fetch('/open-door', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pin: pin })
+            })
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                if (status === 200 && data.status === 'success') {
+                    showStatus('Success: ' + data.message, 'success');
+                    openDoorBtn.classList.remove('error-btn');
+                    openDoorBtn.classList.add('success-btn');
+                    openDoorBtn.textContent = '✓';
+                    
+                    // Play success sound and fancy vibration
+                    playSuccessSound();
+                    if (window.navigator.vibrate) {
+                        // Fancy "ta-da" vibration pattern: short-long-short with crescendo
+                        window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
                     }
+                } else {
+                    // Error (invalid PIN, blocked, etc)
+                    showStatus('Error: ' + data.message, 'error');
+                    openDoorBtn.classList.remove('success-btn');
+                    openDoorBtn.classList.add('error-btn');
+                    openDoorBtn.textContent = '✗';
+                    if (window.navigator.vibrate) window.navigator.vibrate([120]); // Single bzzzt
+                    // Visually shake
+                    openDoorBtn.classList.remove('shake');
+                    void openDoorBtn.offsetWidth; // force reflow
+                    openDoorBtn.classList.add('shake');
+                }
+            })
+            .catch(error => {
+                showStatus('Error: Could not connect to server', 'error');
+            })
+            .finally(() => {
+                // Re-enable button after a short delay
+                setTimeout(() => {
+                    openDoorBtn.disabled = false;
+                    openDoorBtn.textContent = 'Open Door';
+                    openDoorBtn.classList.remove('error-btn', 'success-btn', 'shake');
+                    
+                    // Clear PIN after attempt
+                    currentPin = '';
+                    updatePinDisplay();
+                }, 1200);
+            });
+        }
+        
+        function showStatus(message, type, persistent) {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            if (!persistent) {
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 500);
+                }, 3500);
+            }
+        }
+
+        function updateBatteryLevel(level) {
+            const batteryIcon = document.getElementById('battery-icon');
+            const batteryLevel = document.getElementById('battery-level');
+            if (batteryLevel) {
+                batteryLevel.textContent = (level !== null && level !== undefined) ? `${level}%` : '--';
+            }
+            
+            // Update battery fill based on level
+            if (level >= 80) {
+                batteryIcon.style.background = 'linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%)';
+            } else if (level >= 50) {
+                batteryIcon.style.background = 'linear-gradient(90deg, #8BC34A 0%, #CDDC39 100%)';
+            } else if (level >= 20) {
+                batteryIcon.style.background = 'linear-gradient(90deg, #FFC107 0%, #FF9800 100%)';
+            } else {
+                batteryIcon.style.background = 'linear-gradient(90deg, #F44336 0%, #E91E63 100%)';
+            }
+            
+            // Animate the fill width based on battery level
+            const fillWidth = level ? `${level}%` : '0%';
+            batteryIcon.style.backgroundSize = `${fillWidth} 100%`;
+            batteryIcon.style.backgroundRepeat = 'no-repeat';
+        }
+
+        function fetchBatteryLevel() {
+            fetch('/battery')
+                .then(response => response.json())
+                .then(data => {
+                    updateBatteryLevel(data.level);
                 })
                 .catch(error => {
-                    showStatus('Error: Could not connect to server', 'error');
-                })
-                .finally(() => {
-                    // Re-enable button after a short delay
-                    setTimeout(() => {
-                        openDoorBtn.disabled = false;
-                        openDoorBtn.textContent = 'Open Door';
-                        openDoorBtn.classList.remove('error-btn', 'success-btn', 'shake');
-                    }, 1200);
+                    updateBatteryLevel(null);
                 });
-            });
-            
-            function showStatus(message, type, persistent) {
-                const toastContainer = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = 'toast ' + type;
-                toast.textContent = message;
-                toastContainer.appendChild(toast);
-                setTimeout(() => {
-                    toast.classList.add('show');
-                }, 10);
-                if (!persistent) {
-                    setTimeout(() => {
-                        toast.classList.remove('show');
-                        setTimeout(() => toast.remove(), 500);
-                    }, 3500);
-                }
-            }
+        }
 
-            function updateBatteryLevel(level) {
-                const batteryIcon = document.getElementById('battery-icon');
-                const batteryLevel = document.getElementById('battery-level');
-                if (batteryLevel) {
-                    batteryLevel.textContent = (level !== null && level !== undefined) ? `${level}%` : '--';
-                }
-                
-                // Update battery fill based on level
-                if (level >= 80) {
-                    batteryIcon.style.background = 'linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%)';
-                } else if (level >= 50) {
-                    batteryIcon.style.background = 'linear-gradient(90deg, #8BC34A 0%, #CDDC39 100%)';
-                } else if (level >= 20) {
-                    batteryIcon.style.background = 'linear-gradient(90deg, #FFC107 0%, #FF9800 100%)';
-                } else {
-                    batteryIcon.style.background = 'linear-gradient(90deg, #F44336 0%, #E91E63 100%)';
-                }
-                
-                // Animate the fill width based on battery level
-                const fillWidth = level ? `${level}%` : '0%';
-                batteryIcon.style.backgroundSize = `${fillWidth} 100%`;
-                batteryIcon.style.backgroundRepeat = 'no-repeat';
-            }
-
-            function playSuccessSound() {
+        function playSuccessSound() {
+            try {
                 // Create AudioContext for Web Audio API
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
@@ -405,13 +478,31 @@
                 
                 // Add subtle harmonics for richness
                 playTone(523 * 2, now + 0.35, 0.2, 0.1); // Octave harmonic
+            } catch (e) {
+                // Audio API not supported, fail silently
             }
+        }
 
-            // Fetch battery on load
-            fetch('/battery').then(r=>r.json()).then(data=>{
-                updateBatteryLevel(data.level);
-            }).catch(()=>{
-                updateBatteryLevel(null);
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial battery level fetch
+            fetchBatteryLevel();
+            
+            // Initialize PIN display
+            updatePinDisplay();
+            
+            // Add keyboard support
+            document.addEventListener('keydown', function(event) {
+                if (event.key >= '0' && event.key <= '9') {
+                    addDigit(event.key);
+                    event.preventDefault();
+                } else if (event.key === 'Backspace') {
+                    clearPin();
+                    event.preventDefault();
+                } else if (event.key === 'Enter') {
+                    openDoor();
+                    event.preventDefault();
+                }
             });
         });
     </script>
