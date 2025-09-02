@@ -21,14 +21,19 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 - **Custom Background Support** - Dynamic background image with blur effects
 - **Interactive Feedback** - Visual button states, haptic vibration, and toast notifications
 - **Real-time Battery Display** - Color-coded battery indicator with gradient fills
+- **Admin Access Button** - Floating gear icon in bottom-right corner for easy admin access
 
 ### 🔐 Security & Access Control
 - **Per-User PIN System** - Individual PINs for each resident/user
-- **Admin Dashboard** - Password-protected admin panel for viewing and managing access logs
-- **Brute-Force Protection** - Automatic blocking after failed attempts (5 attempts = 5 minute lockout)
+- **Per-IP Rate Limiting** - Individual IP tracking with progressive delays (1s, 2s, 4s, 8s, 16s)
+- **Advanced Brute-Force Protection** - 5 failed attempts = 5 minute IP-specific lockout
+- **Input Validation** - PIN format validation (4-8 digits) with sanitization
+- **Security Headers** - XSS protection, clickjacking prevention, CSP, and MIME sniffing protection
+- **Admin Dashboard** - Password-protected admin panel with session-based authentication
 - **Comprehensive Audit Logging** - All access attempts logged in JSON format with timestamp, user, IP, and result
+- **Real Client IP Detection** - Proper IP extraction through reverse proxy headers (X-Forwarded-For, X-Real-IP)
 - **Session Security** - CSRF protection and secure session handling
-- **Reverse Proxy Support** - Built-in support for nginx/Apache reverse proxies
+- **Reverse Proxy Optimized** - Security headers and IP detection optimized for nginx/Apache/Cloudflare
 
 ### 🏠 Home Assistant Integration
 - **Native HA API** - Direct integration with Home Assistant switch entities
@@ -126,11 +131,27 @@ curl http://localhost:5000/battery
 
 ## 🔒 Security Features
 
-### Brute-Force Protection
-- **Threshold:** 5 failed attempts
-- **Lockout Duration:** 5 minutes
-- **Scope:** Global protection across all users
-- **Logging:** All blocked attempts are logged
+### Advanced Security Features
+
+#### Per-IP Rate Limiting
+- **Individual IP Tracking** - Each IP address has separate failure counters
+- **Progressive Delays** - Increasing delays: 1s → 2s → 4s → 8s → 16s for repeated failures
+- **IP-Specific Lockouts** - 5 failed attempts = 5 minute block for that IP only
+- **Automatic Reset** - Successful authentication clears failure counter
+
+#### Security Headers (Reverse Proxy Optimized)
+- **X-Content-Type-Options**: `nosniff` - Prevents MIME sniffing attacks
+- **X-Frame-Options**: `DENY` - Prevents clickjacking via iframes
+- **X-XSS-Protection**: `1; mode=block` - Browser XSS filtering
+- **Content-Security-Policy** - Restrictive CSP to prevent XSS attacks
+- **Referrer-Policy**: `strict-origin-when-cross-origin` - Controls referrer information
+- **HTTPS Enforcement** - Left to reverse proxy (nginx/Apache/Cloudflare)
+
+#### Input Validation & Sanitization
+- **PIN Format Validation** - Enforces 4-8 digit numeric PINs only
+- **Request Sanitization** - Proper JSON parsing with comprehensive error handling
+- **Length Limits** - Prevents buffer overflow and DoS attempts
+- **Type Checking** - Ensures data integrity and prevents injection attacks
 
 ### Audit Logging
 All door access attempts are logged to `logs/log.txt` in JSON format with:
@@ -247,10 +268,16 @@ Visit `/admin` to access the password-protected admin dashboard for viewing and 
 - **Filter by:** Status (all, success only, failures only)
 
 ### Usage
-1. Navigate to `http://localhost:5000/admin`
-2. Enter your admin password (configured in `config.ini`)
-3. View, sort, and filter access logs
-4. Use the refresh button to update data
+1. Click the gear icon (⚙️) in the bottom-right corner of the main interface
+2. Or navigate directly to `http://localhost:5000/admin`
+3. Enter your admin password (configured in `config.ini`)
+4. View, sort, and filter access logs with real-time data
+5. Use the refresh button to update data
+
+### Security Considerations
+- Admin sessions are maintained securely using Flask sessions
+- All admin access attempts are logged for audit purposes
+- Password should be changed from default in production deployments
 
 -----
 
