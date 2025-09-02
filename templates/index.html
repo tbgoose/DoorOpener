@@ -350,8 +350,10 @@
 
             function updateBatteryLevel(level) {
                 const batteryIcon = document.getElementById('battery-icon');
-                const batteryPercentage = document.getElementById('battery-percentage');
-                batteryPercentage.textContent = (level !== null && level !== undefined) ? `${level}%` : '--%';
+                const batteryLevel = document.getElementById('battery-level');
+                if (batteryLevel) {
+                    batteryLevel.textContent = (level !== null && level !== undefined) ? `${level}%` : '--';
+                }
                 
                 // Update battery fill based on level
                 if (level >= 80) {
