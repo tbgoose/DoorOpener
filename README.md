@@ -61,16 +61,15 @@ cp config.ini.example config.ini
 
 ### 2. Docker Deployment (Recommended)
 ```bash
-# Optional: Set custom port via environment variable
-export DOOROPENER_PORT=6532
+# Copy and customize environment file (recommended)
+cp .env.example .env
+# Edit .env to set DOOROPENER_PORT if different from 6532
 docker compose up -d
 ```
 
-**Alternative with .env file:**
+**Alternative with direct environment variable:**
 ```bash
-# Copy and customize environment file
-cp .env.example .env
-# Edit .env to set DOOROPENER_PORT if different from 6532
+export DOOROPENER_PORT=6532
 docker compose up -d
 ```
 
@@ -96,10 +95,6 @@ token = your_long_lived_access_token_here
 # Switch entity ID for your door opener
 switch_entity = switch.dooropener_zigbee
 
-[server]
-# Port for the web server (default: 6532)
-port = 6532
-
 [pins]
 # Individual PINs for each user
 alice = 1234
@@ -110,6 +105,26 @@ charlie = 9012
 # Admin dashboard password
 admin_password = your_secure_admin_password
 ```
+
+### Port Configuration (Recommended: Environment Variables)
+
+**Preferred Method - Environment Variables:**
+```bash
+# Set in .env file or export directly
+export DOOROPENER_PORT=6532
+```
+
+**Alternative - config.ini:**
+```ini
+[server]
+# Port for the web server (default: 6532)
+port = 6532
+```
+
+**Priority Order:**
+1. `DOOROPENER_PORT` environment variable (highest priority)
+2. `config.ini` `[server]` `port` setting  
+3. Default fallback: 6532
 
 ### Background Image (Optional)
 Place your custom background image as `/static/background.jpg` for a personalized interface.
@@ -190,8 +205,8 @@ The included `docker-compose.yml` provides:
 
 **Port Configuration:**
 - Uses `DOOROPENER_PORT` environment variable (defaults to 6532)
-- Must match the port setting in your `config.ini` file
-- Can be set via `.env` file or environment variable
+- Environment variable takes priority over `config.ini` settings
+- Recommended to use `.env` file for port configuration
 
 **Container Features:**
 - **Health Checks** - Automatic container health monitoring
