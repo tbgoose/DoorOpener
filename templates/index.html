@@ -10,11 +10,13 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px 0;
             background-color: #f5f5f5;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            box-sizing: border-box;
         }
         body::before {
             content: '';
@@ -67,20 +69,41 @@
             flex: 1 1 auto;
         }
         @media (max-width: 480px) {
-            .input-row {
-                flex-direction: row;
-                width: 100%;
+            body {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 60px;
+            }
+            .container {
+                padding: 2rem 1.5rem;
+                width: 95%;
+                max-width: none;
+                margin-top: 20px;
+            }
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 1.5rem;
             }
             .door-input {
-                font-size: 20px;
-                padding: 12px 6px;
-                width: 100%;
-                max-width: 110px;
+                font-size: 18px !important;
+                padding: 16px 20px !important;
+                width: 85% !important;
+                max-width: none !important;
+                margin-bottom: 2rem !important;
             }
             .door-button {
-                font-size: 18px;
-                padding: 12px 20px;
-                margin-left: 8px;
+                font-size: 20px;
+                min-width: 200px;
+                height: 56px;
+                padding: 0 40px;
+            }
+            #battery-container {
+                top: 12px !important;
+                right: 12px !important;
+                padding: 4px 8px !important;
+            }
+            #battery-container span {
+                font-size: 0.75rem !important;
             }
         }
         .container {
@@ -88,6 +111,7 @@
             padding: 2.5rem;
             max-width: 90%;
             width: 420px;
+            margin: auto;
         }
         h1 {
             color: rgba(0,0,0,0.8);
@@ -211,7 +235,7 @@
         @media (max-width: 600px) {
             #toast-container {
                 right: 2vw;
-                bottom: 2vh;
+                bottom: 8vh;
                 max-width: 96vw;
                 align-items: stretch;
             }
@@ -227,9 +251,9 @@
 <body>
     <div class="container">
         <h1>Rijnmond Deuropener</h1>
-        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" inputmode="numeric" pattern="[0-9]*" style="margin-bottom: 1.5rem; padding: 14px 18px; font-size: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); width: 80%; max-width: 240px; color: rgba(0,0,0,0.8); font-weight: 500;">
+        <input type="password" id="pinInput" class="door-input" placeholder="Enter PIN" autocomplete="off" inputmode="numeric" pattern="[0-9]*" style="margin-bottom: 1.5rem; padding: 14px 18px; font-size: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); width: 80%; max-width: 240px; color: rgba(0,0,0,0.8); font-weight: 500; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
         <button id="openDoorBtn" class="door-button">Open Door</button>
-        <div id="battery-container" style="position: absolute; top: 18px; right: 20px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.25); border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3);">
+        <div id="battery-container" style="position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(255,255,255,0.25); border-radius: 16px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); z-index: 10;">
             <div id="battery-icon" style="width: 20px; height: 10px; border: 1px solid rgba(0,0,0,0.5); border-radius: 1px; position: relative; background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);">
                 <div style="position: absolute; right: -3px; top: 1px; width: 1.5px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 0 1px 1px 0;"></div>
             </div>
@@ -265,7 +289,13 @@
                         openDoorBtn.classList.remove('error-btn');
                         openDoorBtn.classList.add('success-btn');
                         openDoorBtn.textContent = '✓';
-                        if (window.navigator.vibrate) window.navigator.vibrate([80, 60, 80]); // Two short bzzts
+                        
+                        // Play success sound and fancy vibration
+                        playSuccessSound();
+                        if (window.navigator.vibrate) {
+                            // Fancy "ta-da" vibration pattern: short-long-short with crescendo
+                            window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
+                        }
                     } else {
                         // Error (invalid PIN, blocked, etc)
                         showStatus('Error: ' + data.message, 'error');
@@ -330,6 +360,42 @@
                 const fillWidth = level ? `${level}%` : '0%';
                 batteryIcon.style.backgroundSize = `${fillWidth} 100%`;
                 batteryIcon.style.backgroundRepeat = 'no-repeat';
+            }
+
+            function playSuccessSound() {
+                // Create AudioContext for Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Success sound: ascending chime with harmonics
+                const playTone = (frequency, startTime, duration, volume = 0.3) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, startTime);
+                    oscillator.type = 'sine';
+                    
+                    // Smooth volume envelope
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = audioContext.currentTime;
+                
+                // "Ta-da" chord progression: C-E-G-C (262-330-392-523 Hz)
+                playTone(262, now, 0.15, 0.2);        // C4 - short
+                playTone(330, now + 0.08, 0.25, 0.25); // E4 - medium  
+                playTone(392, now + 0.2, 0.3, 0.3);    // G4 - longer
+                playTone(523, now + 0.35, 0.4, 0.35);  // C5 - longest, highest
+                
+                // Add subtle harmonics for richness
+                playTone(523 * 2, now + 0.35, 0.2, 0.1); // Octave harmonic
             }
 
             // Fetch battery on load
