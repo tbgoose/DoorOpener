@@ -16,6 +16,8 @@ admin_password = admin123
 
 [server]
 # Port for the web server (default: 6532)
+# Can be overridden by DOOROPENER_PORT environment variable
 port = 6532
 
-
+# Test mode - when true, shows success message but doesn't actually open door
+test_mode = false

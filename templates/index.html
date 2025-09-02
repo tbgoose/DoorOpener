@@ -252,7 +252,7 @@
     <div class="container">
         <h1>Deuropener</h1>
             <!-- PIN Display -->
-            <div id="pinDisplay" style="width: 100%; padding: 14px 18px; font-size: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); color: rgba(0,0,0,0.8); font-weight: 600; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; text-align: center; min-height: 28px; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+            <div id="pinDisplay" style="width: 280px; margin: 0 auto 1.5rem auto; padding: 14px 18px; font-size: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); color: rgba(0,0,0,0.8); font-weight: 600; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-height: 28px; letter-spacing: 8px; font-family: 'Courier New', monospace;">
                 <!-- PIN dots will appear here -->
             </div>
             
@@ -304,7 +304,15 @@
                 
                 // Haptic feedback
                 if (window.navigator.vibrate) {
-                    window.navigator.vibrate(50);
+                    window.navigator.vibrate(30);
+                }
+                
+                // Auto-submit when PIN reaches valid length (4-8 digits)
+                if (currentPin.length >= 4) {
+                    // Small delay to show the digit being entered
+                    setTimeout(() => {
+                        openDoor();
+                    }, 150);
                 }
             }
         }
@@ -367,7 +375,11 @@
                     openDoorBtn.classList.remove('success-btn');
                     openDoorBtn.classList.add('error-btn');
                     openDoorBtn.textContent = '✗';
+                    
+                    // Play failure sound and vibration
+                    playFailureSound();
                     if (window.navigator.vibrate) window.navigator.vibrate([120]); // Single bzzzt
+                    
                     // Visually shake
                     openDoorBtn.classList.remove('shake');
                     void openDoorBtn.offsetWidth; // force reflow
@@ -478,6 +490,45 @@
                 
                 // Add subtle harmonics for richness
                 playTone(523 * 2, now + 0.35, 0.2, 0.1); // Octave harmonic
+            } catch (e) {
+                // Audio API not supported, fail silently
+            }
+        }
+
+        function playFailureSound() {
+            try {
+                // Create AudioContext for Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // "Womp womp" sound: descending sad trombone effect
+                const playTone = (frequency, startTime, duration, volume = 0.4) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.setValueAtTime(frequency, startTime);
+                    oscillator.type = 'sawtooth'; // Trombone-like sound
+                    
+                    // Smooth volume envelope with fade out
+                    gainNode.gain.setValueAtTime(0, startTime);
+                    gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = audioContext.currentTime;
+                
+                // Classic "womp womp" descending pattern: Bb -> F (233 -> 175 Hz)
+                playTone(233, now, 0.4, 0.3);        // Bb3 - first "womp"
+                playTone(175, now + 0.45, 0.5, 0.35); // F3 - second "womp" (lower and sadder)
+                
+                // Add subtle harmonics for that trombone richness
+                playTone(233 * 2, now, 0.4, 0.1);     // Octave harmonic for first note
+                playTone(175 * 2, now + 0.45, 0.5, 0.12); // Octave harmonic for second note
             } catch (e) {
                 // Audio API not supported, fail silently
             }

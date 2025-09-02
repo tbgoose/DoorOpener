@@ -58,6 +58,7 @@ admin_password = config.get('admin', 'admin_password', fallback='4384339380437ne
 
 # Server Configuration
 server_port = int(os.environ.get('DOOROPENER_PORT', config.getint('server', 'port', fallback=6532)))
+test_mode = config.getboolean('server', 'test_mode', fallback=False)
 
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
@@ -231,7 +232,22 @@ def open_door():
             if client_ip in ip_blocked_until:
                 del ip_blocked_until[client_ip]
 
-            # Try to open door via Home Assistant
+            # Check if test mode is enabled
+            if test_mode:
+                # Test mode: simulate successful door opening without API call
+                reason = 'Door opened (TEST MODE)'
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": client_ip,
+                    "user": matched_user,
+                    "status": "SUCCESS",
+                    "details": reason
+                }
+                attempt_logger.info(json.dumps(log_entry))
+                display_name = matched_user.capitalize()
+                return jsonify({"status": "success", "message": f"Door open command sent (TEST MODE).\nWelcome home, {display_name}!"})
+            
+            # Production mode: try to open door via Home Assistant
             try:
                 url = f"{ha_url}/api/services/switch/turn_on"
                 payload = {"entity_id": switch_entity}

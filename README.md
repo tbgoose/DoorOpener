@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
 </p>
 
-A modern, secure web portal for controlling smart door openers via Home Assistant. Features a premium glass morphism UI, per-user PINs, real-time battery monitoring, and comprehensive security features.
+A modern, secure web portal for controlling smart door openers via Home Assistant. Features a premium glass morphism UI with visual keypad interface, per-user PINs, audio feedback, real-time battery monitoring, and comprehensive security features.
 <img width="1901" height="943" alt="image" src="https://github.com/user-attachments/assets/9b5016f8-8bde-4446-807c-3a3e77a9d97e" />
 <img width="1901" height="943" alt="image" src="https://github.com/user-attachments/assets/53957089-f580-4466-9efd-9341017fd6a2" />
 
@@ -17,10 +17,14 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 
 ### 🎨 Modern UI/UX
 - **Glass Morphism Design** - Premium frosted glass interface with backdrop blur
+- **Visual Keypad Interface** - Touch-friendly 3x4 keypad replacing traditional text input
+- **Auto-Submit PIN Entry** - Door opens automatically when valid PIN length is entered
+- **Audio Feedback** - Success chimes and "womp womp" failure sounds using Web Audio API
 - **Responsive Layout** - Optimized for desktop, tablet, and mobile devices
 - **Custom Background Support** - Dynamic background image with blur effects
 - **Interactive Feedback** - Visual button states, haptic vibration, and toast notifications
 - **Real-time Battery Display** - Color-coded battery indicator with gradient fills
+- **Keyboard Support** - Physical keyboard input (0-9, Backspace, Enter) alongside touch
 - **Admin Access Button** - Floating gear icon in bottom-right corner for easy admin access
 
 ### 🔐 Security & Access Control
@@ -40,6 +44,11 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 - **Zigbee Device Support** - Automatic device detection and battery monitoring
 - **Real-time Status** - Live battery level updates and device state monitoring
 - **Flexible Configuration** - Support for any Home Assistant switch entity
+
+### 🧪 Testing & Development
+- **Test Mode** - Safe testing without physical door operation (`test_mode = true`)
+- **Simulated Success** - Shows success messages and logs without Home Assistant API calls
+- **Full Feature Testing** - All keypad, audio, and security features work in test mode
 
 ### 🐳 Production Ready
 - **Docker Containerization** - Complete Docker setup with health checks
@@ -104,6 +113,12 @@ charlie = 9012
 [admin]
 # Admin dashboard password
 admin_password = your_secure_admin_password
+
+[server]
+# Port for the web server (default: 6532)
+port = 6532
+# Test mode - when true, shows success message but doesn't actually open door
+test_mode = false
 ```
 
 ### Port Configuration (Recommended: Environment Variables)
@@ -125,6 +140,24 @@ port = 6532
 1. `DOOROPENER_PORT` environment variable (highest priority)
 2. `config.ini` `[server]` `port` setting  
 3. Default fallback: 6532
+
+### Test Mode
+
+For testing the interface without actually opening the door, enable test mode:
+
+```ini
+[server]
+test_mode = true
+```
+
+When enabled:
+- ✅ Shows success message with "(TEST MODE)" indicator
+- ✅ All keypad functionality works normally
+- ✅ Rate limiting and logging still apply
+- ❌ **No actual Home Assistant API call is made**
+- ❌ **Door will NOT physically open**
+
+Perfect for testing PIN validation, user interface, and keypad functionality safely.
 
 ### Background Image (Optional)
 Place your custom background image as `/static/background.jpg` for a personalized interface.
