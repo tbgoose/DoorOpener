@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.0] - 2025-09-02
+## v[1.2.0] - 2025-09-02
 
 ### 🔒 Enhanced Security Features
 
