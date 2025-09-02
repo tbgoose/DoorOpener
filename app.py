@@ -46,7 +46,7 @@ config.read(config_path)
 user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
 
 # Admin Configuration
-admin_password = config.get('admin', 'admin_password', fallback='admin123')
+admin_password = config.get('admin', 'admin_password', fallback='4384339380437neghrjlkmfef')
 
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
