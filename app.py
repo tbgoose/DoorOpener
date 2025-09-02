@@ -57,7 +57,7 @@ user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
 admin_password = config.get('admin', 'admin_password', fallback='4384339380437neghrjlkmfef')
 
 # Server Configuration
-server_port = config.getint('server', 'port', fallback=6532)
+server_port = int(os.environ.get('DOOROPENER_PORT', config.getint('server', 'port', fallback=6532)))
 
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')

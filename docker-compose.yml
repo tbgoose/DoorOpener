@@ -4,8 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    environment:
+      - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
     ports:
-      - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"  # Port configurable via environment variable
+      - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
     volumes:
       - ./config.ini:/app/config.ini:ro  # Read-only mount
       - ./logs:/app/logs

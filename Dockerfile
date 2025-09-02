@@ -26,5 +26,5 @@ USER appuser
 
 EXPOSE 6532
 
-# Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:6532", "app:app", "--workers", "2", "--threads", "2", "--timeout", "60"]
+# Use gunicorn with environment variable for port
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${DOOROPENER_PORT:-6532} app:app --workers 2 --threads 2 --timeout 60"]
