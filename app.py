@@ -56,6 +56,9 @@ user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
 # Admin Configuration
 admin_password = config.get('admin', 'admin_password', fallback='4384339380437neghrjlkmfef')
 
+# Server Configuration
+server_port = config.getint('server', 'port', fallback=6532)
+
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
 ha_token = config.get('HomeAssistant', 'token')
@@ -419,4 +422,4 @@ def admin_logs():
         return jsonify({"logs": []}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
+    app.run(host='0.0.0.0', port=server_port, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')

@@ -14,4 +14,8 @@ charlie = 9012  # Set your door opener PIN here
 [admin]
 admin_password = admin123
 
+[server]
+# Port for the web server (default: 6532)
+port = 6532
+
 

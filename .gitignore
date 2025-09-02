@@ -38,3 +38,4 @@ ENV/
 *.swp
 *.swo
 logs/
+.env

@@ -24,7 +24,7 @@ RUN chown -R appuser:appgroup /app
 # Switch to non-root user
 USER appuser
 
-EXPOSE 5000
+EXPOSE 6532
 
 # Use gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers", "2", "--threads", "2", "--timeout", "60"]
+CMD ["gunicorn", "--bind", "0.0.0.0:6532", "app:app", "--workers", "2", "--threads", "2", "--timeout", "60"]

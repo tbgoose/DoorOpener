@@ -61,6 +61,16 @@ cp config.ini.example config.ini
 
 ### 2. Docker Deployment (Recommended)
 ```bash
+# Optional: Set custom port via environment variable
+export DOOROPENER_PORT=6532
+docker compose up -d
+```
+
+**Alternative with .env file:**
+```bash
+# Copy and customize environment file
+cp .env.example .env
+# Edit .env to set DOOROPENER_PORT if different from 6532
 docker compose up -d
 ```
 
@@ -70,7 +80,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Visit [http://localhost:5000](http://localhost:5000) to access the portal.
+Visit [http://localhost:6532](http://localhost:6532) to access the portal.
 
 ---
 
@@ -85,6 +95,10 @@ url = http://homeassistant.local:8123
 token = your_long_lived_access_token_here
 # Switch entity ID for your door opener
 switch_entity = switch.dooropener_zigbee
+
+[server]
+# Port for the web server (default: 6532)
+port = 6532
 
 [pins]
 # Individual PINs for each user
@@ -117,14 +131,14 @@ Place your custom background image as `/static/background.jpg` for a personalize
 
 **Open Door:**
 ```bash
-curl -X POST http://localhost:5000/open-door \
+curl -X POST http://localhost:6532/open-door \
   -H "Content-Type: application/json" \
   -d '{"pin": "1234"}'
 ```
 
 **Check Battery:**
 ```bash
-curl http://localhost:5000/battery
+curl http://localhost:6532/battery
 ```
 
 ---
@@ -173,6 +187,13 @@ All door access attempts are logged to `logs/log.txt` in JSON format with:
 
 ### Production Configuration
 The included `docker-compose.yml` provides:
+
+**Port Configuration:**
+- Uses `DOOROPENER_PORT` environment variable (defaults to 6532)
+- Must match the port setting in your `config.ini` file
+- Can be set via `.env` file or environment variable
+
+**Container Features:**
 - **Health Checks** - Automatic container health monitoring
 - **Resource Limits** - CPU (0.5 cores) and memory (256MB) constraints
 - **Log Management** - Automatic log rotation (10MB max, 3 files)
@@ -269,7 +290,7 @@ Visit `/admin` to access the password-protected admin dashboard for viewing and 
 
 ### Usage
 1. Click the gear icon (⚙️) in the bottom-right corner of the main interface
-2. Or navigate directly to `http://localhost:5000/admin`
+2. Or navigate directly to `http://localhost:6532/admin`
 3. Enter your admin password (configured in `config.ini`)
 4. View, sort, and filter access logs with real-time data
 5. Use the refresh button to update data
