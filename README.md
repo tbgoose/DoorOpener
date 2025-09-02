@@ -219,29 +219,10 @@ DoorOpener/
 
 ---
 
-## 🚨 Security Recommendations
 
-### Network Security
-- **Local Network Only** - Designed for internal network use
-- **HTTPS Required** - Use SSL/TLS for internet-facing deployments
-- **Reverse Proxy** - Deploy behind nginx/Apache for additional security
-- **Firewall Rules** - Restrict access to authorized IP ranges
 
-### Access Control
-- **Strong PINs** - Use 4+ digit PINs, avoid common patterns
-- **Regular Rotation** - Change PINs periodically
-- **User Management** - Remove unused user PINs from configuration
-- **Log Monitoring** - Regularly review audit logs for suspicious activity
 
----
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit pull requests for:
-- UI/UX improvements
-- Additional security features
-- Home Assistant integrations
-- Documentation updates
 
 ---
 
