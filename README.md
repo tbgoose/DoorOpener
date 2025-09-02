@@ -1,4 +1,4 @@
-# 🚪 DoorOpener Web Portal
+# 🚪 DoorOpener Web Portal v1.0
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.8%2B-blue?style=for-the-badge" alt="Python 3.8+">

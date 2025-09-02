@@ -282,7 +282,7 @@
                     }
                 })
                 .catch(error => {
-                    console.log('Not authenticated or error checking auth');
+                    // Silent fail - user not authenticated
                 });
         }
 
@@ -302,7 +302,10 @@
                 document.getElementById('rememberMe').checked = false;
             })
             .catch(error => {
-                console.error('Error logging out:', error);
+                // Handle logout error silently
+                isAuthenticated = false;
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('dashboard').style.display = 'none';
             });
         }
 
@@ -329,7 +332,6 @@
                     filterLogs();
                 })
                 .catch(error => {
-                    console.error('Error loading logs:', error);
                     document.getElementById('logTableBody').innerHTML = 
                         '<tr><td colspan="5" class="no-logs">Error loading logs</td></tr>';
                 });
