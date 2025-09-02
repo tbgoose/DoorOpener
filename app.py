@@ -374,7 +374,8 @@ def open_door():
                     reason = 'Door opened'
                     log_entry = {
                         "timestamp": now.isoformat(),
-                        "ip": client_ip,
+                        "ip": primary_ip,
+                        "session": session_id[:8],
                         "user": matched_user,
                         "status": "SUCCESS",
                         "details": reason
@@ -386,7 +387,8 @@ def open_door():
                     reason = f'Home Assistant API error: {response.status_code}'
                     log_entry = {
                         "timestamp": now.isoformat(),
-                        "ip": client_ip,
+                        "ip": primary_ip,
+                        "session": session_id[:8],
                         "user": matched_user,
                         "status": "FAILURE",
                         "details": reason
@@ -400,7 +402,7 @@ def open_door():
                     "ip": primary_ip,
                     "session": session_id[:8],
                     "user": matched_user,
-                    "status": "FAILURE",
+                    "status": "API_FAILURE",
                     "details": reason
                 }
                 attempt_logger.info(json.dumps(log_entry))
