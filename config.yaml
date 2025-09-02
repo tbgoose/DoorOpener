@@ -1,0 +1,86 @@
+name: DoorOpener
+version: "1.2.0"
+slug: dooropener
+description: "Secure web interface for door control with visual keypad, multi-layer security, and audio feedback"
+url: "https://github.com/Sloth-on-meth/DoorOpener"
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+startup: application
+boot: auto
+ports:
+  6532/tcp: 6532
+ports_description:
+  6532/tcp: Web interface port
+options:
+  pins:
+    alice: "1234"
+    bob: "5678"
+  admin:
+    admin_password: "admin123"
+  homeassistant:
+    ha_url: "http://supervisor/core"
+    ha_token: ""
+    switch_entity: "switch.door_opener"
+  server:
+    port: 6532
+    test_mode: false
+  security:
+    max_attempts: 5
+    block_time_minutes: 5
+    session_max_attempts: 3
+    max_global_attempts_per_hour: 50
+schema:
+  pins:
+    type: dict
+    required: true
+  admin:
+    type: dict
+    required: true
+    keys:
+      admin_password:
+        type: str
+        required: true
+  homeassistant:
+    type: dict
+    required: true
+    keys:
+      ha_url:
+        type: str
+        default: "http://supervisor/core"
+      ha_token:
+        type: str
+        required: true
+      switch_entity:
+        type: str
+        required: true
+  server:
+    type: dict
+    required: false
+    keys:
+      port:
+        type: int
+        default: 6532
+      test_mode:
+        type: bool
+        default: false
+  security:
+    type: dict
+    required: false
+    keys:
+      max_attempts:
+        type: int
+        default: 5
+      block_time_minutes:
+        type: int
+        default: 5
+      session_max_attempts:
+        type: int
+        default: 3
+      max_global_attempts_per_hour:
+        type: int
+        default: 50
+image: "ghcr.io/sloth-on-meth/dooropener-addon"
