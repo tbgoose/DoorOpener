@@ -61,7 +61,7 @@ cp config.ini.example config.ini
 
 ### 2. Docker Deployment (Recommended)
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 3. Manual Installation
@@ -182,19 +182,19 @@ The included `docker-compose.yml` provides:
 ### Docker Commands
 ```bash
 # Start the application
-docker-compose up -d
+docker compose up -d
 
 # View real-time logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop the application
-docker-compose down
+docker compose down
 
 # Rebuild after code changes
-docker-compose build && docker-compose up -d --force-recreate
+docker compose build && docker compose up -d --force-recreate
 
 # Check container health
-docker-compose ps
+docker compose ps
 ```
 
 ### Volume Mounts
