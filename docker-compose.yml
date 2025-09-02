@@ -1,16 +1,13 @@
-
 services:
   dooropener:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: Sloth-on-meth/DoorOpener:v1.2
     environment:
       - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
       - TZ=${TZ:-UTC}
     ports:
       - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
     volumes:
-      - ./config.ini:/app/config.ini:ro  # Read-only mount
+      - ./config.ini:/app/config.ini:ro # Read-only mount
       - ./logs:/app/logs
     restart: unless-stopped
 
@@ -29,8 +26,6 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.50'
+          cpus: "0.50"
           memory: 256M
     container_name: dooropener
-    
-
