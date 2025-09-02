@@ -22,8 +22,9 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 
 ### 🔐 Security & Access Control
 - **Per-User PIN System** - Individual PINs for each resident/user
+- **Admin Dashboard** - Password-protected admin panel for viewing and managing access logs
 - **Brute-Force Protection** - Automatic blocking after failed attempts (5 attempts = 5 minute lockout)
-- **Comprehensive Audit Logging** - All access attempts logged with timestamp, user, IP, and result
+- **Comprehensive Audit Logging** - All access attempts logged in JSON format with timestamp, user, IP, and result
 - **Session Security** - CSRF protection and secure session handling
 - **Reverse Proxy Support** - Built-in support for nginx/Apache reverse proxies
 
@@ -83,6 +84,10 @@ switch_entity = switch.dooropener_zigbee
 alice = 1234
 bob = 5678
 charlie = 9012
+
+[admin]
+# Admin dashboard password
+admin_password = your_secure_admin_password
 ```
 
 ### Background Image (Optional)
@@ -97,6 +102,9 @@ Place your custom background image as `/static/background.jpg` for a personalize
 | `/` | GET | Main web interface |
 | `/open-door` | POST | Door control endpoint (requires PIN) |
 | `/battery` | GET | Real-time battery level data |
+| `/admin` | GET | Admin dashboard interface |
+| `/admin/auth` | POST | Admin authentication endpoint |
+| `/admin/logs` | GET | JSON log data for admin dashboard |
 
 ### Request Examples
 
@@ -123,17 +131,17 @@ curl http://localhost:5000/battery
 - **Logging:** All blocked attempts are logged
 
 ### Audit Logging
-All door access attempts are logged to `logs/log.txt` with:
+All door access attempts are logged to `logs/log.txt` in JSON format with:
 - ISO timestamp
 - Client IP address
 - Username (if PIN matched)
 - Result (SUCCESS/FAILURE)
 - Failure reason (if applicable)
 
-**Example Log Entry:**
-```
-2024-01-15T10:30:45.123456 - 192.168.1.100 - alice - SUCCESS - Door opened
-2024-01-15T10:31:12.789012 - 192.168.1.101 - UNKNOWN - FAILURE - Invalid PIN, PIN: 9999
+**Example Log Entries:**
+```json
+{"timestamp": "2024-01-15T10:30:45.123456", "ip": "192.168.1.100", "user": "alice", "status": "SUCCESS", "details": "Door opened"}
+{"timestamp": "2024-01-15T10:31:12.789012", "ip": "192.168.1.101", "user": "UNKNOWN", "status": "FAILURE", "details": "Invalid PIN, PIN: 9999"}
 ```
 
 ---
@@ -210,21 +218,39 @@ DoorOpener/
 ├── Dockerfile            # Container definition
 ├── docker-compose.yml    # Container orchestration
 ├── templates/
-│   └── index.html        # Main web interface
+│   ├── index.html        # Main web interface
+│   └── admin.html        # Admin dashboard interface
 ├── static/
 │   └── background.jpg    # Custom background (optional)
 └── logs/
-    └── log.txt          # Audit log file
+    └── log.txt          # Audit log file (JSON format)
 ```
 
 ---
 
+## 🔧 Admin Dashboard
 
+### Access
+Visit `/admin` to access the password-protected admin dashboard for viewing and managing access logs.
 
+### Features
+- **Secure Login** - Password protection using `admin_password` from config.ini
+- **Log Viewing** - Sortable and filterable table of all access attempts
+- **Real-time Data** - Live log data with refresh functionality
+- **Modern UI** - Glass morphism design matching the main interface
 
+### Sorting & Filtering
+- **Sort by:** Time (newest/oldest), User, Status
+- **Filter by:** User (all users or specific user)
+- **Filter by:** Status (all, success only, failures only)
 
+### Usage
+1. Navigate to `http://localhost:5000/admin`
+2. Enter your admin password (configured in `config.ini`)
+3. View, sort, and filter access logs
+4. Use the refresh button to update data
 
----
+-----
 
 ## 📄 License
 
