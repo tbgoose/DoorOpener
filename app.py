@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DoorOpener Web Portal
----------------------
+DoorOpener Web Portal v1.1
+---------------------------
 A secure Flask web app to open a door via Home Assistant API, with per-user PINs, 
 per-IP rate limiting, admin logging, and security headers.
 """

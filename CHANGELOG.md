@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.1.0] - 2025-09-02
+
+### 🔧 Configuration Improvements
+
+#### ✨ New Features
+- **Environment Variable Port Configuration** - Port can now be configured via `DOOROPENER_PORT` environment variable
+- **Flexible Configuration Priority** - Environment variables take precedence over config.ini settings
+- **Docker Environment Integration** - Seamless port configuration through .env files and docker-compose
+
+#### 🛠️ Technical Improvements
+- **Simplified Docker Setup** - Removed complex startup scripts in favor of environment variable approach
+- **Better Configuration Management** - Clear priority order: ENV var → config.ini → default fallback
+- **Enhanced Documentation** - Updated README with environment variable best practices
+
+#### 📝 Configuration Priority Order
+1. `DOOROPENER_PORT` environment variable (highest priority)
+2. `config.ini` `[server]` `port` setting
+3. Default fallback: 6532
+
+#### 🐛 Bug Fixes
+- Fixed Docker container not respecting config.ini port settings
+- Improved port configuration consistency between host and container
+
+---
+
 ## [1.0.0] - 2025-09-02
 
 ### 🎉 Initial Release

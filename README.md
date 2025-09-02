@@ -1,7 +1,7 @@
-# 🚪 DoorOpener Web Portal v1.0
+# 🚪 DoorOpener Web Portal v1.1
 
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.8%2B-blue?style=for-the-badge" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge" alt="Version 1.1.0">
   <img src="https://img.shields.io/badge/flask-2.3.3-green?style=for-the-badge&logo=flask&logoColor=white" alt="Flask 2.3.3">
   <img src="https://img.shields.io/badge/docker-ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge" alt="PRs Welcome">
