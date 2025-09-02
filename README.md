@@ -282,6 +282,20 @@ Visit `/admin` to access the password-protected admin dashboard for viewing and 
 ### Known Issues
 - **Admin Login Persistence**: Admin login currently logs out on every page refresh. Session persistence is not working properly despite cookie configuration. This is a known issue that needs to be resolved.
 
+---
+
+## ⚠️ Security Disclaimer
+
+**Important Notice**: This project was developed by someone who is not a security expert. While best practices have been implemented where possible, this software should be used with caution in production environments.
+
+### Security Recommendations
+- **Change Default Passwords**: Always change the default admin password before deployment
+- **Use HTTPS**: Deploy behind a reverse proxy with SSL/TLS termination
+
+
+### Liability
+This software is provided "as is" without warranty. Users are responsible for their own security assessments and implementations.
+
 -----
 
 ## 📄 License
