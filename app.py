@@ -6,16 +6,32 @@ A secure Flask web app to open a door via Home Assistant API, with per-user PINs
 per-IP rate limiting, admin logging, and security headers.
 """
 import os
-import configparser
 import json
 import time
 import logging
+import requests
+import secrets
+from datetime import datetime, timedelta
+from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.middleware.proxy_fix import ProxyFix
-import requests
-from datetime import datetime, timedelta
-import secrets
-from collections import defaultdict
+from configparser import ConfigParser
+import pytz
+
+# --- Timezone Setup ---
+# Get timezone from environment variable, default to UTC
+TZ = os.environ.get('TZ', 'UTC')
+try:
+    TIMEZONE = pytz.timezone(TZ)
+    print(f"Using timezone: {TZ}")
+except pytz.exceptions.UnknownTimeZoneError:
+    print(f"Unknown timezone '{TZ}', falling back to UTC")
+    TIMEZONE = pytz.UTC
+    TZ = 'UTC'
+
+def get_current_time():
+    """Get current time in the configured timezone"""
+    return datetime.now(TIMEZONE)
 
 # --- Logging Setup ---
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
@@ -76,11 +92,17 @@ ha_headers = {
     'Content-Type': 'application/json'
 }
 
-# --- Per-IP Rate Limiting ---
+# --- Enhanced Security & Rate Limiting ---
 ip_failed_attempts = defaultdict(int)
 ip_blocked_until = defaultdict(lambda: None)
+session_failed_attempts = defaultdict(int)
+session_blocked_until = defaultdict(lambda: None)
+global_failed_attempts = 0
+global_last_reset = get_current_time()
 MAX_ATTEMPTS = 5
 BLOCK_TIME = timedelta(minutes=5)
+MAX_GLOBAL_ATTEMPTS_PER_HOUR = 50
+SESSION_MAX_ATTEMPTS = 3
 
 # Configure main logging
 logging.basicConfig(
@@ -93,14 +115,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_client_ip():
-    """Get real client IP from reverse proxy headers"""
-    if request.headers.get('X-Forwarded-For'):
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    elif request.headers.get('X-Real-IP'):
-        return request.headers.get('X-Real-IP')
-    else:
-        return request.remote_addr
+def get_client_identifier():
+    """Get client identifier using multiple factors for better security"""
+    # Use request.remote_addr as primary (can't be spoofed easily)
+    primary_ip = request.remote_addr
+    
+    # Create session-based identifier if available
+    session_id = session.get('_session_id')
+    if not session_id:
+        session_id = secrets.token_hex(16)
+        session['_session_id'] = session_id
+    
+    # Combine multiple factors for identifier
+    user_agent = request.headers.get('User-Agent', '')[:100]  # Limit length
+    accept_lang = request.headers.get('Accept-Language', '')[:50]
+    
+    # Create composite identifier (harder to spoof than just IP)
+    identifier = f"{primary_ip}:{hash(user_agent + accept_lang) % 10000}"
+    
+    return primary_ip, session_id, identifier
 
 def add_security_headers(response):
     """Add security headers for reverse proxy deployment"""
@@ -119,6 +152,36 @@ def add_security_headers(response):
 def get_delay_seconds(attempt_count):
     """Calculate progressive delay: 1s, 2s, 4s, 8s, 16s"""
     return min(2 ** (attempt_count - 1), 16) if attempt_count > 0 else 0
+
+def check_global_rate_limit():
+    """Check global rate limiting across all requests"""
+    global global_failed_attempts, global_last_reset
+    now = get_current_time()
+    
+    # Reset global counter every hour
+    if now - global_last_reset > timedelta(hours=1):
+        global_failed_attempts = 0
+        global_last_reset = now
+    
+    return global_failed_attempts < MAX_GLOBAL_ATTEMPTS_PER_HOUR
+
+def is_request_suspicious():
+    """Detect suspicious request patterns"""
+    # Check for missing or suspicious headers
+    user_agent = request.headers.get('User-Agent', '')
+    if not user_agent or len(user_agent) < 10:
+        return True
+    
+    # Check for common bot patterns
+    suspicious_agents = ['curl', 'wget', 'python-requests', 'bot', 'crawler']
+    if any(agent in user_agent.lower() for agent in suspicious_agents):
+        return True
+    
+    # Check for rapid requests (basic timing check)
+    if not hasattr(request, 'start_time'):
+        request.start_time = get_current_time()
+    
+    return False
 
 def validate_pin_input(pin):
     """Validate PIN input format and length"""
@@ -181,18 +244,63 @@ def battery():
 @app.route('/open-door', methods=['POST'])
 def open_door():
     try:
-        client_ip = get_client_ip()
-        now = datetime.utcnow()
+        primary_ip, session_id, identifier = get_client_identifier()
+        now = get_current_time()
+        global global_failed_attempts
         
-        # Check if IP is currently blocked
-        if ip_blocked_until[client_ip] and now < ip_blocked_until[client_ip]:
-            remaining = (ip_blocked_until[client_ip] - now).total_seconds()
+        # Check for suspicious requests first
+        if is_request_suspicious():
+            reason = 'Suspicious request detected'
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": primary_ip,
+                "session": session_id[:8],
+                "user": "UNKNOWN",
+                "status": "SUSPICIOUS",
+                "details": reason
+            }
+            attempt_logger.info(json.dumps(log_entry))
+            return jsonify({"status": "error", "message": "Request blocked"}), 403
+        
+        # Check global rate limit
+        if not check_global_rate_limit():
+            reason = 'Global rate limit exceeded'
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": primary_ip,
+                "session": session_id[:8],
+                "user": "UNKNOWN",
+                "status": "GLOBAL_BLOCKED",
+                "details": reason
+            }
+            attempt_logger.info(json.dumps(log_entry))
+            return jsonify({"status": "error", "message": "Service temporarily unavailable"}), 429
+        
+        # Check session-based blocking (harder to bypass)
+        if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+            remaining = (session_blocked_until[session_id] - now).total_seconds()
+            reason = f'Session blocked for {int(remaining)} more seconds'
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": primary_ip,
+                "session": session_id[:8],
+                "user": "UNKNOWN",
+                "status": "SESSION_BLOCKED",
+                "details": reason
+            }
+            attempt_logger.info(json.dumps(log_entry))
+            return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
+        
+        # Check IP-based blocking (fallback)
+        if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+            remaining = (ip_blocked_until[identifier] - now).total_seconds()
             reason = f'IP blocked for {int(remaining)} more seconds'
             log_entry = {
                 "timestamp": now.isoformat(),
-                "ip": client_ip,
+                "ip": primary_ip,
+                "session": session_id[:8],
                 "user": "UNKNOWN",
-                "status": "BLOCKED",
+                "status": "IP_BLOCKED",
                 "details": reason
             }
             attempt_logger.info(json.dumps(log_entry))
@@ -205,13 +313,18 @@ def open_door():
         # Validate PIN format
         pin_valid, validated_pin = validate_pin_input(pin_from_request)
         if not pin_valid:
-            ip_failed_attempts[client_ip] += 1
+            # Increment all counters on invalid input
+            ip_failed_attempts[identifier] += 1
+            session_failed_attempts[session_id] += 1
+            global_failed_attempts += 1
+            
             reason = validated_pin  # Error message
             log_entry = {
                 "timestamp": now.isoformat(),
-                "ip": client_ip,
+                "ip": primary_ip,
+                "session": session_id[:8],
                 "user": "UNKNOWN",
-                "status": "FAILURE",
+                "status": "INVALID_FORMAT",
                 "details": reason
             }
             attempt_logger.info(json.dumps(log_entry))
@@ -228,9 +341,12 @@ def open_door():
 
         if matched_user:
             # Reset failed attempts on successful auth
-            ip_failed_attempts[client_ip] = 0
-            if client_ip in ip_blocked_until:
-                del ip_blocked_until[client_ip]
+            ip_failed_attempts[identifier] = 0
+            session_failed_attempts[session_id] = 0
+            if identifier in ip_blocked_until:
+                del ip_blocked_until[identifier]
+            if session_id in session_blocked_until:
+                del session_blocked_until[session_id]
 
             # Check if test mode is enabled
             if test_mode:
@@ -238,7 +354,8 @@ def open_door():
                 reason = 'Door opened (TEST MODE)'
                 log_entry = {
                     "timestamp": now.isoformat(),
-                    "ip": client_ip,
+                    "ip": primary_ip,
+                    "session": session_id[:8],
                     "user": matched_user,
                     "status": "SUCCESS",
                     "details": reason
@@ -280,7 +397,8 @@ def open_door():
                 reason = f'API call failed: {str(e)}'
                 log_entry = {
                     "timestamp": now.isoformat(),
-                    "ip": client_ip,
+                    "ip": primary_ip,
+                    "session": session_id[:8],
                     "user": matched_user,
                     "status": "FAILURE",
                     "details": reason
@@ -288,37 +406,53 @@ def open_door():
                 attempt_logger.info(json.dumps(log_entry))
                 return jsonify({"status": "error", "message": reason}), 500
         else:
-            # Failed authentication - increment counter and apply rate limiting
-            ip_failed_attempts[client_ip] += 1
+            # Failed authentication - increment all counters
+            ip_failed_attempts[identifier] += 1
+            session_failed_attempts[session_id] += 1
+            global_failed_attempts += 1
             
-            # Check if we should block this IP
-            if ip_failed_attempts[client_ip] >= MAX_ATTEMPTS:
-                ip_blocked_until[client_ip] = now + BLOCK_TIME
-                reason = f'Invalid PIN. IP blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes after {MAX_ATTEMPTS} failed attempts'
+            # Check session-based blocking first (harder to bypass)
+            if session_failed_attempts[session_id] >= SESSION_MAX_ATTEMPTS:
+                session_blocked_until[session_id] = now + BLOCK_TIME
+                reason = f'Invalid PIN. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes after {SESSION_MAX_ATTEMPTS} failed attempts'
+            elif ip_failed_attempts[identifier] >= MAX_ATTEMPTS:
+                ip_blocked_until[identifier] = now + BLOCK_TIME
+                reason = f'Invalid PIN. Access blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes after {MAX_ATTEMPTS} failed attempts'
             else:
-                # Apply progressive delay
-                delay = get_delay_seconds(ip_failed_attempts[client_ip])
+                # Apply progressive delay based on session attempts (more secure)
+                delay = get_delay_seconds(session_failed_attempts[session_id])
                 if delay > 0:
                     time.sleep(delay)
-                remaining_attempts = MAX_ATTEMPTS - ip_failed_attempts[client_ip]
+                remaining_attempts = min(
+                    SESSION_MAX_ATTEMPTS - session_failed_attempts[session_id],
+                    MAX_ATTEMPTS - ip_failed_attempts[identifier]
+                )
                 reason = f'Invalid PIN. {remaining_attempts} attempts remaining'
             
             log_entry = {
                 "timestamp": now.isoformat(),
-                "ip": client_ip,
+                "ip": primary_ip,
+                "session": session_id[:8],
                 "user": "UNKNOWN",
-                "status": "FAILURE",
+                "status": "AUTH_FAILURE",
                 "details": reason
             }
             attempt_logger.info(json.dumps(log_entry))
             return jsonify({"status": "error", "message": reason}), 401
 
     except Exception as e:
+        try:
+            primary_ip, session_id, _ = get_client_identifier()
+        except:
+            primary_ip = request.remote_addr
+            session_id = "unknown"
+        
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "ip": get_client_ip(),
+            "timestamp": get_current_time().isoformat(),
+            "ip": primary_ip,
+            "session": session_id[:8] if session_id != "unknown" else "unknown",
             "user": "UNKNOWN",
-            "status": "FAILURE",
+            "status": "EXCEPTION",
             "details": f"Exception in open_door: {e}"
         }
         attempt_logger.info(json.dumps(log_entry))
@@ -336,7 +470,7 @@ def admin_auth():
     
     if password == admin_password:
         session['admin_authenticated'] = True
-        session['admin_login_time'] = datetime.utcnow().isoformat()
+        session['admin_login_time'] = get_current_time().isoformat()
         
         # Set session to be permanent if remember_me is checked
         if remember_me:

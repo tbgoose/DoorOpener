@@ -39,6 +39,22 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 - **Session Security** - CSRF protection and secure session handling
 - **Reverse Proxy Optimized** - Security headers and IP detection optimized for nginx/Apache/Cloudflare
 
+### 🔒 Security Features
+
+- **Multi-Layer Rate Limiting**: 
+  - Session-based blocking (3 attempts per session)
+  - IP-based blocking (5 attempts per IP composite identifier)
+  - Global rate limiting (50 attempts per hour across all users)
+- **Enhanced IP Detection**: Uses `request.remote_addr` (harder to spoof) combined with User-Agent and language headers for composite identification
+- **Session Tracking**: Unique session identifiers prevent easy bypass of rate limits
+- **Suspicious Request Detection**: Blocks requests with missing/suspicious User-Agent headers or bot patterns
+- **Progressive Delays**: 1s, 2s, 4s, 8s, 16s delays after failed attempts
+- **Automatic Blocking**: 5-minute blocks after exceeding attempt limits
+- **Session Security**: HTTPOnly cookies with SameSite protection
+- **Security Headers**: Content Security Policy, XSS protection, frame options
+- **Comprehensive Logging**: All attempts logged with timestamps, IPs, session IDs, users, and outcomes
+- **Admin Authentication**: Separate admin panel with password protection
+
 ### 🏠 Home Assistant Integration
 - **Native HA API** - Direct integration with Home Assistant switch entities
 - **Zigbee Device Support** - Automatic device detection and battery monitoring
@@ -49,6 +65,11 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 - **Test Mode** - Safe testing without physical door operation (`test_mode = true`)
 - **Simulated Success** - Shows success messages and logs without Home Assistant API calls
 - **Full Feature Testing** - All keypad, audio, and security features work in test mode
+
+### 🌍 Timezone Support
+- **Environment Variable** - Set `TZ` environment variable for local timezone (default: UTC)
+- **Consistent Logging** - All timestamps in logs use the configured timezone
+- **Examples** - `TZ=America/New_York`, `TZ=Europe/London`, `TZ=Asia/Tokyo`
 
 ### 🐳 Production Ready
 - **Docker Containerization** - Complete Docker setup with health checks

@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
+      - TZ=${TZ:-UTC}
     ports:
       - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
     volumes:
