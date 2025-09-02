@@ -141,7 +141,24 @@ def battery():
         if response.status_code == 200:
             state_data = response.json()
             battery_level = state_data.get('state')
-            return jsonify({"level": battery_level})
+            logger.info(f"Battery response: {state_data}")
+            
+            # Handle different battery level formats
+            if battery_level is not None:
+                try:
+                    # Convert to float and ensure it's a valid percentage
+                    battery_float = float(battery_level)
+                    if 0 <= battery_float <= 100:
+                        return jsonify({"level": int(battery_float)})
+                    else:
+                        logger.warning(f"Battery level out of range: {battery_float}")
+                        return jsonify({"level": None})
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid battery level format: {battery_level}")
+                    return jsonify({"level": None})
+            else:
+                logger.warning("Battery level is None")
+                return jsonify({"level": None})
         else:
             logger.error(f"Failed to fetch battery state: {response.status_code} {response.text}")
             return jsonify({"level": None})
