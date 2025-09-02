@@ -90,6 +90,9 @@ config.read(config_path)
 # Load per-user PINs from [pins] section
 user_pins = dict(config.items('pins')) if config.has_section('pins') else {}
 
+# Admin Configuration
+admin_password = config.get('admin', 'admin_password', fallback='admin123')
+
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
 ha_token = config.get('HomeAssistant', 'token')
@@ -155,12 +158,26 @@ def open_door():
         # Brute-force protection (reuse existing logic)
         if BLOCKED_UNTIL and now < BLOCKED_UNTIL:
             remaining = int((BLOCKED_UNTIL - now).total_seconds())
-            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - Blocked: still blocked for {remaining}s")
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": client_ip,
+                "user": "UNKNOWN",
+                "status": "FAILURE",
+                "details": f"Blocked: still blocked for {remaining}s"
+            }
+            attempt_logger.info(json.dumps(log_entry))
             return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
 
         if not pin_from_request:
             reason = 'PIN required'
-            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}")
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": client_ip,
+                "user": "UNKNOWN",
+                "status": "FAILURE",
+                "details": reason
+            }
+            attempt_logger.info(json.dumps(log_entry))
             return jsonify({"status": "error", "message": "PIN required"}), 400
 
         # Check against per-user PINs
@@ -180,12 +197,26 @@ def open_door():
         if not pin_valid:
             FAILED_ATTEMPTS += 1
             reason = 'Invalid PIN'
-            attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - {reason}, PIN: {pin_from_request}")
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": client_ip,
+                "user": "UNKNOWN",
+                "status": "FAILURE",
+                "details": f"{reason}, PIN: {pin_from_request}"
+            }
+            attempt_logger.info(json.dumps(log_entry))
             if FAILED_ATTEMPTS >= MAX_ATTEMPTS:
                 BLOCKED_UNTIL = now + BLOCK_TIME
                 FAILED_ATTEMPTS = 0
                 remaining = int((BLOCKED_UNTIL - now).total_seconds())
-                attempt_logger.info(f"{now.isoformat()} - {client_ip} - UNKNOWN - FAILURE - Blocked: too many failed attempts")
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": client_ip,
+                    "user": "UNKNOWN",
+                    "status": "FAILURE",
+                    "details": "Blocked: too many failed attempts"
+                }
+                attempt_logger.info(json.dumps(log_entry))
                 return jsonify({"status": "error", "message": f"Too many failed attempts. Try again in {remaining//60}m {remaining%60}s."}), 429
             return jsonify({"status": "error", "message": "Invalid PIN"}), 403
         else:
@@ -201,22 +232,133 @@ def open_door():
             if response.status_code == 200:
                 result = 'SUCCESS'
                 reason = 'Door opened'
-                attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - SUCCESS - {reason}")
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": client_ip,
+                    "user": matched_user,
+                    "status": "SUCCESS",
+                    "details": reason
+                }
+                attempt_logger.info(json.dumps(log_entry))
                 display_name = matched_user.capitalize() if matched_user else 'resident'
                 return jsonify({"status": "success", "message": f"Door open command sent.\nWelcome home, {display_name}!"})
             else:
                 result = 'FAILURE'
                 reason = f'HA API error: {response.status_code} - {response.text}'
-                attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}")
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": client_ip,
+                    "user": matched_user,
+                    "status": "FAILURE",
+                    "details": reason
+                }
+                attempt_logger.info(json.dumps(log_entry))
                 return jsonify({"status": "error", "message": reason}), 500
         except Exception as e:
             result = 'FAILURE'
             reason = f'API call failed: {str(e)}'
-            attempt_logger.info(f"{now.isoformat()} - {client_ip} - {matched_user} - FAILURE - {reason}")
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": client_ip,
+                "user": matched_user,
+                "status": "FAILURE",
+                "details": reason
+            }
+            attempt_logger.info(json.dumps(log_entry))
             return jsonify({"status": "error", "message": reason}), 500
     except Exception as e:
-        attempt_logger.info(f"{datetime.utcnow().isoformat()} - UNKNOWN - UNKNOWN - FAILURE - Exception in open_door: {e}")
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "ip": "UNKNOWN",
+            "user": "UNKNOWN",
+            "status": "FAILURE",
+            "details": f"Exception in open_door: {e}"
+        }
+        attempt_logger.info(json.dumps(log_entry))
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/admin')
+def admin():
+    """Admin dashboard for viewing login attempts"""
+    return render_template('admin.html')
+
+
+@app.route('/admin/auth', methods=['POST'])
+def admin_auth():
+    """Authenticate admin access"""
+    data = request.get_json()
+    password = data.get('password', '').strip() if data else ''
+    
+    if password == admin_password:
+        return jsonify({"status": "success"})
+    else:
+        return jsonify({"status": "error", "message": "Invalid admin password"}), 403
+
+
+@app.route('/admin/logs')
+def admin_logs():
+    """Get parsed log data for admin dashboard"""
+    try:
+        logs = []
+        log_path = os.path.join(os.path.dirname(__file__), 'logs', 'log.txt')
+        
+        if os.path.exists(log_path):
+            with open(log_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # Parse JSON log format
+                    try:
+                        # Handle log lines that may have timestamp prefix from logging module
+                        # Format: "2025-09-02 11:42:33,123 - INFO - {json}"
+                        json_start = line.find('{')
+                        if json_start != -1:
+                            json_part = line[json_start:]
+                            log_data = json.loads(json_part)
+                        else:
+                            log_data = json.loads(line)
+                            
+                        logs.append({
+                            'timestamp': log_data.get('timestamp'),
+                            'ip': log_data.get('ip'),
+                            'user': log_data.get('user') if log_data.get('user') != 'UNKNOWN' else None,
+                            'status': log_data.get('status'),
+                            'details': log_data.get('details')
+                        })
+                    except json.JSONDecodeError:
+                        # Fallback for old format logs: timestamp - ip - user - status - details
+                        try:
+                            # Check if it's the old dash-separated format
+                            if ' - ' in line and not line.startswith('{'):
+                                parts = line.split(' - ', 4)
+                                if len(parts) >= 4:
+                                    timestamp = parts[0]
+                                    ip = parts[1]
+                                    user = parts[2] if parts[2] != 'UNKNOWN' else None
+                                    status = parts[3]
+                                    details = parts[4] if len(parts) > 4 else None
+                                    
+                                    logs.append({
+                                        'timestamp': timestamp,
+                                        'ip': ip,
+                                        'user': user,
+                                        'status': status,
+                                        'details': details
+                                    })
+                        except Exception as e:
+                            logger.error(f"Error parsing old format log line: {line}, error: {e}")
+                            continue
+                    except Exception as e:
+                        logger.error(f"Error parsing JSON log line: {line}, error: {e}")
+                        continue
+        
+        return jsonify({"logs": logs})
+    except Exception as e:
+        logger.error(f"Error reading logs: {e}")
+        return jsonify({"logs": []}), 500
 
 
 if __name__ == '__main__':

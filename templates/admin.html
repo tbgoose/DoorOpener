@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Door Opener</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            position: relative;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            background: url('/static/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            opacity: 0.92;
+            pointer-events: none;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2));
+            box-shadow: 
+                0 8px 32px 0 rgba(31, 38, 135, 0.2),
+                0 2px 16px 0 rgba(255, 255, 255, 0.3),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            backdrop-filter: blur(15px) saturate(1.3);
+            -webkit-backdrop-filter: blur(15px) saturate(1.3);
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 2rem;
+            overflow: hidden;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            border-radius: 20px 20px 0 0;
+        }
+        h1 {
+            color: rgba(0,0,0,0.8);
+            margin-bottom: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        label {
+            font-weight: 600;
+            color: rgba(0,0,0,0.8);
+        }
+        select, input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+            color: rgba(0,0,0,0.8);
+            font-weight: 500;
+        }
+        .refresh-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, #45a049, #3e8e41);
+            transform: translateY(-1px);
+        }
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .log-table th {
+            background: rgba(255,255,255,0.3);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: rgba(0,0,0,0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+        .log-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: rgba(0,0,0,0.8);
+        }
+        .log-table tr:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .status-success {
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        .status-failure {
+            color: #c62828;
+            font-weight: 600;
+        }
+        .no-logs {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(0,0,0,0.6);
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+                margin: 10px;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .control-group {
+                justify-content: space-between;
+            }
+            .log-table {
+                font-size: 0.9rem;
+            }
+            .log-table th,
+            .log-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loginForm" style="text-align: center;">
+            <h1>🔐 Admin Login</h1>
+            <div style="margin-bottom: 2rem;">
+                <input type="password" id="adminPassword" placeholder="Admin Password" 
+                       style="padding: 14px 18px; font-size: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); width: 80%; max-width: 240px; color: rgba(0,0,0,0.8); font-weight: 500; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem;">
+                <br>
+                <button onclick="login()" style="padding: 12px 24px; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">Login</button>
+            </div>
+            <div id="loginError" style="color: #c62828; margin-top: 1rem; display: none;"></div>
+        </div>
+
+        <div id="dashboard" style="display: none;">
+            <h1>🔐 Admin Dashboard</h1>
+            
+            <div class="controls">
+            <div class="control-group">
+                <label for="sortBy">Sort by:</label>
+                <select id="sortBy" onchange="sortLogs()">
+                    <option value="time">Time (newest first)</option>
+                    <option value="time_asc">Time (oldest first)</option>
+                    <option value="user">User</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="filterUser">Filter by user:</label>
+                <select id="filterUser" onchange="filterLogs()">
+                    <option value="">All users</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="filterStatus">Filter by status:</label>
+                <select id="filterStatus" onchange="filterLogs()">
+                    <option value="">All statuses</option>
+                    <option value="SUCCESS">Success</option>
+                    <option value="FAILURE">Failure</option>
+                </select>
+            </div>
+                <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
+            </div>
+
+            <div id="logContainer">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>IP Address</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    <tr>
+                        <td colspan="5" class="no-logs">Loading logs...</td>
+                    </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allLogs = [];
+        let filteredLogs = [];
+        let isAuthenticated = false;
+
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            fetch('/admin/auth', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    isAuthenticated = true;
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    loadLogs();
+                } else {
+                    errorDiv.textContent = 'Invalid admin password';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                errorDiv.textContent = 'Error connecting to server';
+                errorDiv.style.display = 'block';
+            });
+        }
+
+        // Allow Enter key to login
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('adminPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+        });
+
+        function loadLogs() {
+            if (!isAuthenticated) return;
+            
+            fetch('/admin/logs')
+                .then(response => response.json())
+                .then(data => {
+                    allLogs = data.logs || [];
+                    populateUserFilter();
+                    filterLogs();
+                })
+                .catch(error => {
+                    console.error('Error loading logs:', error);
+                    document.getElementById('logTableBody').innerHTML = 
+                        '<tr><td colspan="5" class="no-logs">Error loading logs</td></tr>';
+                });
+        }
+
+        function populateUserFilter() {
+            const userSelect = document.getElementById('filterUser');
+            const users = [...new Set(allLogs.map(log => log.user).filter(user => user))];
+            
+            // Clear existing options except "All users"
+            userSelect.innerHTML = '<option value="">All users</option>';
+            
+            users.sort().forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                userSelect.appendChild(option);
+            });
+        }
+
+        function filterLogs() {
+            const userFilter = document.getElementById('filterUser').value;
+            const statusFilter = document.getElementById('filterStatus').value;
+
+            filteredLogs = allLogs.filter(log => {
+                const userMatch = !userFilter || log.user === userFilter;
+                const statusMatch = !statusFilter || log.status === statusFilter;
+                return userMatch && statusMatch;
+            });
+
+            sortLogs();
+        }
+
+        function sortLogs() {
+            const sortBy = document.getElementById('sortBy').value;
+
+            filteredLogs.sort((a, b) => {
+                switch(sortBy) {
+                    case 'time':
+                        // Sort by raw timestamp string for ISO format
+                        return b.timestamp.localeCompare(a.timestamp);
+                    case 'time_asc':
+                        return a.timestamp.localeCompare(b.timestamp);
+                    case 'user':
+                        return (a.user || 'UNKNOWN').localeCompare(b.user || 'UNKNOWN');
+                    case 'status':
+                        return a.status.localeCompare(b.status);
+                    default:
+                        return 0;
+                }
+            });
+
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const tbody = document.getElementById('logTableBody');
+            
+            if (filteredLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="no-logs">No logs found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredLogs.map(log => {
+                const statusClass = log.status === 'SUCCESS' ? 'status-success' : 'status-failure';
+                
+                // Parse ISO timestamp properly
+                let timestamp = log.timestamp;
+                try {
+                    const date = new Date(log.timestamp);
+                    if (!isNaN(date.getTime())) {
+                        timestamp = date.toLocaleString();
+                    }
+                } catch (e) {
+                    // Keep original timestamp if parsing fails
+                }
+                
+                return `
+                    <tr>
+                        <td>${timestamp}</td>
+                        <td>${log.ip}</td>
+                        <td>${log.user || 'UNKNOWN'}</td>
+                        <td class="${statusClass}">${log.status}</td>
+                        <td>${log.details || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Load logs on page load
+        document.addEventListener('DOMContentLoaded', loadLogs);
+    </script>
+</body>
+</html>
