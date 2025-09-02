@@ -158,6 +158,9 @@
             max-width: 90vw;
             pointer-events: none;
         }
+        body #toast-container {
+            position: fixed !important;
+        }
         .toast {
             min-width: 180px;
             max-width: 320px;
@@ -209,8 +212,8 @@
             <span id="battery-icon" style="font-size: 2rem; vertical-align: middle;">🔋</span>
             <span id="battery-percentage" style="font-size: 1.2rem; vertical-align: middle;">--%</span>
         </div>
-        <div id="toast-container"></div>
     </div>
+    <div id="toast-container"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
