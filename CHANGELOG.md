@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.2.0] - 2025-09-02
+
+### 🔒 Enhanced Security Features
+
+#### ✨ New Security Improvements
+- **Multi-Layer Rate Limiting** - Session-based (3 attempts), IP-based (5 attempts), and global (50/hour) protection
+- **Enhanced IP Detection** - Uses `request.remote_addr` instead of spoofable client headers
+- **Session Tracking** - Unique session identifiers prevent easy bypass of rate limits
+- **Suspicious Request Detection** - Blocks requests with missing/bot User-Agent headers
+- **Composite Identifiers** - IP + User-Agent/language fingerprinting for better tracking
+
+#### 🎨 Visual Interface Improvements
+- **Visual Keypad Interface** - Replaced text input with responsive 3x4 grid keypad (0-9, backspace, enter)
+- **Auto-Submit PIN Entry** - Door opens automatically when valid PIN length (4-8 digits) is entered
+- **Perfect Alignment** - PIN display and keypad visually centered and width-matched
+- **Keyboard Support** - Physical keyboard input (0-9, Backspace, Enter) works alongside touch
+
+#### 🔊 Audio & Feedback Features
+- **Success Sound** - Ascending chime sequence using Web Audio API
+- **Failure Sound** - "Womp womp" descending trombone effect for invalid attempts
+- **Visual Feedback** - Button animations, haptic vibration, toast notifications
+- **Responsive Design** - Optimized for both desktop and mobile devices
+
+#### 🧪 Testing & Development
+- **Test Mode** - Safe testing without physical door operation (`test_mode = true` in config.ini)
+- **Simulated Success** - Shows success messages and logs without Home Assistant API calls
+- **Full Feature Testing** - All keypad, audio, and security features work in test mode
+
+#### 🌍 Timezone Support
+- **Environment Variable** - Set `TZ` environment variable for local timezone (default: UTC)
+- **Consistent Logging** - All timestamps in logs use the configured timezone
+- **Docker Integration** - Timezone configuration through docker-compose environment
+
+#### 🛠️ Technical Improvements
+- **Enhanced Logging** - Session IDs, composite identifiers, and detailed status tracking
+- **Progressive Security** - Multiple blocking mechanisms with different thresholds
+- **Dependency Updates** - Added pytz for robust timezone handling
+
+#### 🐛 Bug Fixes
+- Fixed variable reference errors in logging statements
+- Resolved import conflicts with configparser
+- Improved error handling in security functions
+
+---
+
 ## [1.1.0] - 2025-09-02
 
 ### 🔧 Configuration Improvements
