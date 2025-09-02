@@ -1,5 +1,7 @@
 # Home Assistant Add-on Documentation
 
+# NOTE: THIS PART WAS ALL VIBECODED - I HAVE NO EXPERIENCE BUILDING HA ADDONS AND I DO NOT HAVE SUPERVISED RUNNING
+
 ## Installation
 
 ### Method 1: Add-on Store (Recommended)
