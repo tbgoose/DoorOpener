@@ -9,7 +9,7 @@
 
 A modern, secure web portal for controlling smart door openers via Home Assistant. Features a premium glass morphism UI with visual keypad interface, per-user PINs, audio feedback, real-time battery monitoring, and comprehensive security features.
 <img width="1901" height="943" alt="image" src="https://github.com/user-attachments/assets/9b5016f8-8bde-4446-807c-3a3e77a9d97e" />
-<img width="1901" height="943" alt="image" src="https://github.com/user-attachments/assets/53957089-f580-4466-9efd-9341017fd6a2" />
+<img width="1920" height="949" alt="image" src="https://github.com/user-attachments/assets/5ea98bb2-1328-45ac-b18c-f51894f423bf" />
 
 ---
 
