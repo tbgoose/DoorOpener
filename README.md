@@ -81,7 +81,30 @@ A modern, secure web portal for controlling smart door openers via Home Assistan
 
 ## 🚀 Quick Start
 
-### 1. Clone & Configure
+### Option 1: Home Assistant Add-on (Recommended)
+
+1. **Add Repository** - Add this repository to your Home Assistant add-on store:
+   ```
+   https://github.com/Sloth-on-meth/DoorOpener
+   ```
+
+2. **Install Add-on** - Install "DoorOpener" from the add-on store
+
+3. **Configure** - Set up your configuration in the add-on options:
+   ```yaml
+   pins:
+     alice: "1234"
+     bob: "5678"
+   admin:
+     admin_password: "your-secure-password"
+   homeassistant:
+     ha_token: "your-long-lived-access-token"
+     switch_entity: "switch.your_door_lock"
+   ```
+
+4. **Start** - Start the add-on and access at `http://homeassistant.local:6532`
+
+### Option 2: Docker Compose
 ```bash
 git clone https://github.com/Sloth-on-meth/DoorOpener.git
 cd DoorOpener
