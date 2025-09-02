@@ -279,6 +279,9 @@ Visit `/admin` to access the password-protected admin dashboard for viewing and 
 - All admin access attempts are logged for audit purposes
 - Password should be changed from default in production deployments
 
+### Known Issues
+- **Admin Login Persistence**: Admin login currently logs out on every page refresh. Session persistence is not working properly despite cookie configuration. This is a known issue that needs to be resolved.
+
 -----
 
 ## 📄 License
