@@ -1,6 +1,8 @@
 services:
   dooropener:
-    image: Sloth-on-meth/DoorOpener:v1.2
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
       - TZ=${TZ:-UTC}
