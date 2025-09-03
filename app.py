@@ -396,14 +396,17 @@ def open_door():
                     attempt_logger.info(json.dumps(log_entry))
                     return jsonify({"status": "error", "message": reason}), 500
             except Exception as e:
-                reason = f'API call failed: {str(e)}'
+                import traceback
+                reason = 'Internal server error during API call'
                 log_entry = {
                     "timestamp": now.isoformat(),
                     "ip": primary_ip,
                     "session": session_id[:8],
                     "user": matched_user,
                     "status": "API_FAILURE",
-                    "details": reason
+                    "details": reason,
+                    "exception": str(e),
+                    "traceback": traceback.format_exc()
                 }
                 attempt_logger.info(json.dumps(log_entry))
                 return jsonify({"status": "error", "message": reason}), 500
