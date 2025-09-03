@@ -79,12 +79,15 @@ test_mode = config.getboolean('server', 'test_mode', fallback=False)
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
 ha_token = config.get('HomeAssistant', 'token')
-switch_entity = config.get('HomeAssistant', 'switch_entity')
+entity_id = config.get('HomeAssistant', 'switch_entity')  # Backward compatible; can be lock or switch
 battery_entity = config.get('HomeAssistant', 'battery_entity', 
-                           fallback=f'sensor.{switch_entity.split(".")[1]}_battery')
+                           fallback=f'sensor.{entity_id.split(".")[1]}_battery')
 
-# Extract device name from switch entity
-device_name = switch_entity.split('.')[1] if '.' in switch_entity else switch_entity
+# Extract device name from entity
+if '.' in entity_id:
+    device_name = entity_id.split('.')[1]
+else:
+    device_name = entity_id
 
 # Headers for HA API requests
 ha_headers = {
@@ -366,8 +369,11 @@ def open_door():
             
             # Production mode: try to open door via Home Assistant
             try:
-                url = f"{ha_url}/api/services/switch/turn_on"
-                payload = {"entity_id": switch_entity}
+                if entity_id.startswith('lock.'):
+                    url = f"{ha_url}/api/services/lock/unlock"
+                else:
+                    url = f"{ha_url}/api/services/switch/turn_on"
+                payload = {"entity_id": entity_id}
                 response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
                 
                 if response.status_code == 200:
