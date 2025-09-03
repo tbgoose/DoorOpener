@@ -55,10 +55,7 @@ docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/
 
 ### Home Assistant Add-on
 
-1. Add repository: `https://github.com/Sloth-on-meth/DoorOpener`
-2. Install "DoorOpener" from add-on store
-3. Configure with your Home Assistant token and switch entity
-4. Start and access at `http://homeassistant.local:6532`
+not functional yet
 
 ## Configuration
 
