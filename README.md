@@ -6,7 +6,7 @@ A secure web interface for controlling smart door openers via Home Assistant. Fe
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
-<img width="1920" height="949" alt="DoorOpener Admin Dashboard" src="https://github.com/user-attachments/assets/79cefb52-2757-47e3-9c1c-4bf418743971" />
+<img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/4d5259fa-ee7b-4d03-a02b-b77301cebf0c" />
 
 ## What It Does
 
