@@ -1,5 +1,14 @@
 # Changelog
 
+## v[1.3.0] - 2025-09-03
+
+### 🚀 Features & Improvements
+- Now you do not have to build anymore - ghcr setup!
+### 🐛 Bug Fixes
+- api error
+
+---
+
 ## v[1.2.0] - 2025-09-02
 
 ### 🔒 Enhanced Security Features
