@@ -1,5 +1,19 @@
 # Home Assistant Add-on Documentation
 
+---
+
+## Docker Compose Usage
+
+The default `docker-compose.yml` now uses the official image from [ghcr.io](https://ghcr.io/sloth-on-meth/dooropener). You do **not** need to build the image locally.
+
+- To use the prebuilt image, simply run:
+  ```bash
+  docker-compose up -d
+  ```
+- If you want to build locally (for development), uncomment the `build:` section and comment out the `image:` line in `docker-compose.yml`.
+
+---
+
 # NOTE: THIS PART WAS ALL VIBECODED - I HAVE NO EXPERIENCE BUILDING HA ADDONS AND I DO NOT HAVE SUPERVISED RUNNING
 
 ## Installation

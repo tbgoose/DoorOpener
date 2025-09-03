@@ -25,7 +25,7 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 
 ### Docker (Recommended)
 
-You can build and run DoorOpener locally using Docker:
+You can run DoorOpener using the prebuilt image from GitHub Container Registry (ghcr.io):
 
 ```bash
 git clone https://github.com/Sloth-on-meth/DoorOpener.git
@@ -34,11 +34,18 @@ cp config.ini.example config.ini
 cp .env.example .env
 # Edit config.ini with your Home Assistant details and PINs
 # Edit .env to set DOOROPENER_PORT if different from 6532
-docker build -t dooropener:latest .
-docker run -d --env-file .env -p 6532:6532 dooropener:latest
+docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/logs:/app/logs -p 6532:6532 ghcr.io/sloth-on-meth/dooropener:latest
 ```
 
-This will build and start DoorOpener on your local machine. If you need to change the port, update the .env file and adjust the `-p` argument accordingly.
+This will start DoorOpener using the official image. If you need to change the port, update the .env file and adjust the `-p` argument accordingly.
+
+#### Building Locally (Optional)
+If you want to build the image yourself:
+```bash
+docker build -t dooropener:latest .
+docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/logs:/app/logs -p 6532:6532 dooropener:latest
+```
+
 
 <!--
 #### Using the public ghcr.io image
