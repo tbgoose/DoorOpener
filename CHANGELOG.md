@@ -1,3 +1,13 @@
+## v[1.4.0] - 2025-09-03
+
+### 🆙 Dependency Updates
+- Updated all core dependencies to latest stable versions (Flask 3.1.2, requests 2.32.5, Werkzeug 3.1.3, pytz 2025.2) for improved security and compatibility.
+
+### ♻️ Maintenance
+- General codebase maintenance and preparation for future features.
+
+---
+
 # Changelog
 
 ## v[1.3.0] - 2025-09-03

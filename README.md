@@ -2,7 +2,7 @@
 
 A secure web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
-![Version 1.3.0](https://img.shields.io/badge/version-1.3.0-blue?style=flat-square)
+![Version 1.4.0](https://img.shields.io/badge/version-1.4.0-blue?style=flat-square)
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
