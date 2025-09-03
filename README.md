@@ -4,7 +4,8 @@ A secure web interface for controlling smart door openers via Home Assistant. Fe
 
 ![Version 1.2.0](https://img.shields.io/badge/version-1.2.0-blue?style=flat-square)
 
-<img width="1920" height="949" alt="DoorOpener Main Interface" src="https://github.com/user-attachments/assets/5ea98bb2-1328-45ac-b18c-f51894f423bf" />
+<img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
+
 <img width="1920" height="949" alt="DoorOpener Admin Dashboard" src="https://github.com/user-attachments/assets/79cefb52-2757-47e3-9c1c-4bf418743971" />
 
 ## What It Does
