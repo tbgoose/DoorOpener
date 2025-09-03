@@ -11,7 +11,7 @@
 
 Secure web interface for door control with visual keypad, multi-layer security, and audio feedback.
 
-## About
+## About#
 
 DoorOpener provides a beautiful, secure web interface to control door locks through Home Assistant. Features include:
 
