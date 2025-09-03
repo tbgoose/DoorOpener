@@ -24,7 +24,9 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 
 ### Docker (Recommended)
 
-> **Note:** Pre-built images on ghcr.io are not working yet and are being worked on. For now, you'll need to build locally to avoid having to build every time.
+You can use the pre-built image from GitHub Container Registry (ghcr.io) or build your own.
+
+#### Using the public ghcr.io image
 
 ```bash
 git clone https://github.com/Sloth-on-meth/DoorOpener.git
@@ -35,6 +37,29 @@ cp .env.example .env
 # Edit .env to set DOOROPENER_PORT if different from 6532
 docker compose up -d
 ```
+
+This uses the image: `ghcr.io/sloth-on-meth/dooropener:latest` (see `docker-compose.yml`).
+
+#### Building and pushing your own image to ghcr.io
+
+1. Build the Docker image locally:
+   ```sh
+   docker build -t dooropener:latest .
+   ```
+2. Tag the image for GitHub Container Registry:
+   ```sh
+   docker tag dooropener:latest ghcr.io/sloth-on-meth/dooropener:latest
+   ```
+3. Authenticate Docker with GitHub (requires a Personal Access Token with `write:packages` scope):
+   ```sh
+   echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
+4. Push the image:
+   ```sh
+   docker push ghcr.io/sloth-on-meth/dooropener:latest
+   ```
+5. Make the package public in your GitHub repo under the "Packages" section.
+
 
 ### Home Assistant Add-on
 
