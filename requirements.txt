@@ -1,4 +1,4 @@
 Flask==2.3.3
-requests==2.31.0
+requests>=2.32.4
 Werkzeug==3.0.6
 pytz==2023.3
