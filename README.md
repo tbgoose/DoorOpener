@@ -1,6 +1,6 @@
 # 🚨 Help Wanted: Home Assistant Add-on Needed!
 
-**I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please consider contributing an add-on structure or PR!**
+**I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
 
 > **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker, pip, etc).
 
