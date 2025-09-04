@@ -1,0 +1,26 @@
+# Home Assistant add-on configuration for DoorOpener
+name: DoorOpener
+version: "1.0.0"
+description: "A secure web interface for controlling smart door openers via Home Assistant. Supports switches, locks, and input_booleans."
+ingress: true
+panel_icon: "mdi:door"
+panel_title: "DoorOpener"
+startup: application
+boot: auto
+hassio_api: true
+host_network: true
+webui: http://[HOST]:[PORT:6532]/
+ports:
+  6532/tcp: 6532
+options:
+  url: "http://homeassistant.local:8123"
+  token: ""
+  switch_entity: "switch.dooropener_zigbee"
+  admin_password: "admin123"
+  test_mode: false
+schema:
+  url: "str?"
+  token: "str"
+  switch_entity: "str"
+  admin_password: "str?"
+  test_mode: "bool?"

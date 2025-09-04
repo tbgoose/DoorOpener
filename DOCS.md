@@ -1,5 +1,10 @@
 # Home Assistant Add-on Documentation
 
+**DoorOpener can be run as a Home Assistant add-on!**
+- See the `addon/` directory for all required files
+- Follow the instructions below to install as a local or custom add-on
+
+
 ---
 
 ## Docker Compose Usage
