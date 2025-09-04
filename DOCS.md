@@ -32,7 +32,7 @@ The default `docker-compose.yml` now uses the official image from [ghcr.io](http
 3. **Configure Add-on**
    - Go to Configuration tab
    - Set your PIN codes, admin password, and Home Assistant token
-   - Configure your door lock switch entity
+   - Configure your door lock entity (supports `switch`, `lock`, or `input_boolean` types)
 
 4. **Start Add-on**
    - Go to Info tab

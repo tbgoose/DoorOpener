@@ -20,6 +20,7 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 - Multi-layer security with rate limiting and IP blocking
 - Admin dashboard for viewing access logs
 - Test mode for safe development
+- **Supports Home Assistant `switch`, `lock`, and `input_boolean` entities**
 
 ## Quick Start
 
