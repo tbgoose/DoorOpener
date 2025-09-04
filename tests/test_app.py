@@ -46,3 +46,5 @@ def test_admin_logs_unauthenticated(client):
     response = client.get('/admin/logs')
     assert response.status_code == 401
     assert 'error' in response.json
+
+#this test was AI generated lmao
