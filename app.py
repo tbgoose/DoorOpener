@@ -371,6 +371,8 @@ def open_door():
             try:
                 if entity_id.startswith('lock.'):
                     url = f"{ha_url}/api/services/lock/unlock"
+                elif entity_id.startswith('input_boolean.'):
+                    url = f"{ha_url}/api/services/input_boolean/turn_on"
                 else:
                     url = f"{ha_url}/api/services/switch/turn_on"
                 payload = {"entity_id": entity_id}
