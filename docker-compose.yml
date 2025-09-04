@@ -6,7 +6,7 @@ services:
     image: ghcr.io/sloth-on-meth/dooropener:latest
     environment:
       - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
-      - TZ=${TZ:-UTC}
+      - TZ=${TZ:-Europe/Amsterdam}
     ports:
       - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
     volumes:
