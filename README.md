@@ -10,7 +10,7 @@
 
 A secure web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
-![Version 1.4.0](https://img.shields.io/badge/version-1.4.0-blue?style=flat-square)
+![Version 1.5.0](https://img.shields.io/badge/version-1.5.0-blue?style=flat-square)
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
@@ -93,6 +93,12 @@ admin_password = secure_password
 [server]
 port = 6532  # Overridden by DOOROPENER_PORT env var if set
 test_mode = false  # Set to true for testing without opening door
+
+[security]
+max_attempts = 5  # Maximum failed attempts per IP before blocking
+block_time_minutes = 5  # Block time in minutes after max attempts reached
+max_global_attempts_per_hour = 50  # Maximum global attempts per hour across all users
+session_max_attempts = 3  # Maximum failed attempts per session before blocking
 ```
 
 **Configuration Priority:**
@@ -109,11 +115,22 @@ test_mode = false  # Set to true for testing without opening door
 
 ## Security Features
 
-- **Rate Limiting** - Progressive delays (1s→16s) and IP blocking after 5 failed attempts
+- **Configurable Rate Limiting** - Customizable failed attempt limits and block times
+- **Multi-Layer Protection** - IP-based, session-based, and global rate limiting
+- **Progressive Delays** - Increasing delays (1s→16s) after failed attempts
 - **Session Tracking** - Prevents easy bypass of security measures  
 - **Audit Logging** - All attempts logged with timestamps, IPs, and results
 - **Input Validation** - PIN format validation and request sanitization
 - **Security Headers** - XSS protection, clickjacking prevention, CSP
+
+### Security Configuration
+
+All security parameters are configurable via `config.ini`:
+
+- `max_attempts` - Failed attempts per IP before blocking (default: 5)
+- `block_time_minutes` - Block duration in minutes (default: 5)
+- `max_global_attempts_per_hour` - Global rate limit across all users (default: 50)
+- `session_max_attempts` - Failed attempts per session before blocking (default: 3)
 
 ## API Endpoints
 
