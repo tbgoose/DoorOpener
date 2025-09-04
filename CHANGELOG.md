@@ -1,3 +1,13 @@
+## v[1.5.0] - 2025-09-04
+
+### 🛠️ Maintenance & Release Preparation
+- Removed deprecated `repository.json` file.
+- Moved `favicon-192.png` into the `static/` directory for better asset organization.
+- Updated documentation and project structure to clarify Home Assistant add-on compatibility and standalone usage requirements.
+- General code review and preparation for v1.5 release.
+
+---
+
 ## v[1.4.0] - 2025-09-03
 
 ### 🆙 Dependency Updates
