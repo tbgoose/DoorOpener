@@ -102,10 +102,11 @@ session_failed_attempts = defaultdict(int)
 session_blocked_until = defaultdict(lambda: None)
 global_failed_attempts = 0
 global_last_reset = get_current_time()
-MAX_ATTEMPTS = 5
-BLOCK_TIME = timedelta(minutes=5)
-MAX_GLOBAL_ATTEMPTS_PER_HOUR = 50
-SESSION_MAX_ATTEMPTS = 3
+# Load security settings from config
+MAX_ATTEMPTS = config.getint('security', 'max_attempts', fallback=5)
+BLOCK_TIME = timedelta(minutes=config.getint('security', 'block_time_minutes', fallback=5))
+MAX_GLOBAL_ATTEMPTS_PER_HOUR = config.getint('security', 'max_global_attempts_per_hour', fallback=50)
+SESSION_MAX_ATTEMPTS = config.getint('security', 'session_max_attempts', fallback=3)
 
 # Configure main logging
 logging.basicConfig(

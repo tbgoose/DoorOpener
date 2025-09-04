@@ -21,3 +21,13 @@ port = 6532
 
 # Test mode - when true, shows success message but doesn't actually open door
 test_mode = false
+
+[security]
+# Maximum failed attempts per IP before blocking
+max_attempts = 5
+# Block time in minutes after max attempts reached
+block_time_minutes = 5
+# Maximum global attempts per hour across all users
+max_global_attempts_per_hour = 50
+# Maximum failed attempts per session before blocking
+session_max_attempts = 3
