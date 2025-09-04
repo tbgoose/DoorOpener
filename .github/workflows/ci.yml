@@ -22,8 +22,7 @@ jobs:
       - name: Prepare test config and env
         run: |
           cp config.ini.example tests/config.ini
-          echo "DOOROPENER_PORT=6532
-TZ=UTC" > tests/.env
+          cp .env.example tests/.env
       - name: Run tests
         env:
           CONFIG_INI: tests/config.ini
