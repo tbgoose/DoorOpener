@@ -1,3 +1,15 @@
+## v[1.6.0] - 2025-09-04
+
+### 🚀 Features & Improvements
+- **Configurable Security Parameters**: All rate limiting and blocking thresholds are now settable in `[security]` section of `config.ini`.
+- **Dynamic Security Settings**: Security values (max attempts, block time, etc) are now loaded from config, not hardcoded.
+- **Improved Error Messaging**: On door open failure, users are prompted with 'Please contact the administrator.'
+- **Documentation**: README and config.ini.example updated for new security features.
+- **UI/JS Polish**: Minor bugfixes and cleanup for keypad and error handling.
+- **Version bump to 1.6.0**
+
+---
+
 ## v[1.5.0] - 2025-09-04
 
 ### 🛠️ Maintenance & Release Preparation
