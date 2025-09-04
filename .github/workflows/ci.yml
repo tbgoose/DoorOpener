@@ -19,6 +19,30 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Create minimal config.ini and .env for tests
+        run: |
+          echo "[HomeAssistant]
+url = http://localhost:8123
+token = dummy_token
+switch_entity = switch.dummy
+
+[pins]
+testuser = 1234
+
+[admin]
+admin_password = testpass
+
+[server]
+port = 6532
+test_mode = true
+
+[security]
+max_attempts = 5
+block_time_minutes = 5
+max_global_attempts_per_hour = 50
+session_max_attempts = 3" > config.ini
+          echo "DOOROPENER_PORT=6532
+TZ=UTC" > .env
       - name: Run tests
         run: |
           pytest --maxfail=1 --disable-warnings -q
