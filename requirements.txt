@@ -2,3 +2,4 @@ Flask
 requests
 Werkzeug
 pytz
+pytest

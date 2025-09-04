@@ -13,7 +13,7 @@ import requests
 import secrets
 from datetime import datetime, timedelta
 from collections import defaultdict
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
 from configparser import ConfigParser
 import pytz
@@ -47,6 +47,14 @@ attempt_logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(log_path)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
 attempt_logger.handlers = [file_handler]
+
+# Add a logger for general errors if not already present
+logger = logging.getLogger('dooropener')
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
 # --- Flask App Setup ---
 app = Flask(__name__)
@@ -188,19 +196,15 @@ def is_request_suspicious():
     return False
 
 def validate_pin_input(pin):
-    """Validate PIN input format and length"""
-    if not pin or not isinstance(pin, str):
-        return False, "PIN is required"
-    
-    pin = pin.strip()
-    
-    if len(pin) < 4 or len(pin) > 8:
-        return False, "PIN must be 4-8 digits"
-    
-    if not pin.isdigit():
-        return False, "PIN must contain only numbers"
-    
-    return True, pin
+    try:
+        if not isinstance(pin, str):
+            raise ValueError("PIN must be a string")
+        if not pin.isdigit() or not (4 <= len(pin) <= 8):
+            return False, None
+        return True, pin
+    except Exception as e:
+        logger.error(f"Error validating PIN input: {e}")
+        return False, None
 
 @app.after_request
 def after_request(response):
@@ -311,8 +315,11 @@ def open_door():
             return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
 
         # Get and validate PIN input
-        data = request.get_json()
-        pin_from_request = data.get('pin') if data else None
+        data = request.get_json(force=True, silent=True)
+        if not data or 'pin' not in data:
+            logger.warning("No PIN provided in request body")
+            return jsonify({"status": "error", "message": "PIN required"}), 400
+        pin_from_request = data['pin']
         
         # Validate PIN format
         pin_valid, validated_pin = validate_pin_input(pin_from_request)
@@ -322,7 +329,7 @@ def open_door():
             session_failed_attempts[session_id] += 1
             global_failed_attempts += 1
             
-            reason = validated_pin  # Error message
+            reason = "Invalid PIN format"  # Error message
             log_entry = {
                 "timestamp": now.isoformat(),
                 "ip": primary_ip,
@@ -379,6 +386,8 @@ def open_door():
                 payload = {"entity_id": entity_id}
                 response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
                 
+                response.raise_for_status() # Raise an exception for bad status codes
+                
                 if response.status_code == 200:
                     reason = 'Door opened'
                     log_entry = {
@@ -404,6 +413,9 @@ def open_door():
                     }
                     attempt_logger.info(json.dumps(log_entry))
                     return jsonify({"status": "error", "message": reason}), 500
+            except requests.RequestException as e:
+                logger.error(f"Error communicating with Home Assistant: {e}")
+                return jsonify({"status": "error", "message": "Failed to contact Home Assistant"}), 502
             except Exception as e:
                 import traceback
                 reason = 'Internal server error during API call'
@@ -531,59 +543,56 @@ def admin_logs():
         log_path = os.path.join(os.path.dirname(__file__), 'logs', 'log.txt')
         
         if os.path.exists(log_path):
-            with open(log_path, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    # Parse JSON log format
-                    try:
-                        # Handle log lines that may have timestamp prefix from logging module
-                        json_start = line.find('{')
-                        if json_start != -1:
-                            json_part = line[json_start:]
-                            log_data = json.loads(json_part)
-                        else:
-                            log_data = json.loads(line)
-                            
-                        logs.append({
-                            'timestamp': log_data.get('timestamp'),
-                            'ip': log_data.get('ip'),
-                            'user': log_data.get('user') if log_data.get('user') != 'UNKNOWN' else None,
-                            'status': log_data.get('status'),
-                            'details': log_data.get('details')
-                        })
-                    except json.JSONDecodeError:
-                        # Fallback for old format logs: timestamp - ip - user - status - details
+            try:
+                with open(log_path, 'r') as f:
+                    for line in f:
                         try:
-                            if ' - ' in line and not line.startswith('{'):
-                                parts = line.split(' - ', 4)
-                                if len(parts) >= 4:
-                                    timestamp = parts[0]
-                                    ip = parts[1]
-                                    user = parts[2] if parts[2] != 'UNKNOWN' else None
-                                    status = parts[3]
-                                    details = parts[4] if len(parts) > 4 else None
-                                    
-                                    logs.append({
-                                        'timestamp': timestamp,
-                                        'ip': ip,
-                                        'user': user,
-                                        'status': status,
-                                        'details': details
-                                    })
+                            # Handle log lines that may have timestamp prefix from logging module
+                            json_start = line.find('{')
+                            if json_start != -1:
+                                json_part = line[json_start:]
+                                log_data = json.loads(json_part)
+                            else:
+                                log_data = json.loads(line)
+                                
+                            logs.append({
+                                'timestamp': log_data.get('timestamp'),
+                                'ip': log_data.get('ip'),
+                                'user': log_data.get('user') if log_data.get('user') != 'UNKNOWN' else None,
+                                'status': log_data.get('status'),
+                                'details': log_data.get('details')
+                            })
+                        except json.JSONDecodeError as e:
+                            # Fallback for old format logs: timestamp - ip - user - status - details
+                            try:
+                                if ' - ' in line and not line.startswith('{'):
+                                    parts = line.split(' - ', 4)
+                                    if len(parts) >= 4:
+                                        timestamp = parts[0]
+                                        ip = parts[1]
+                                        user = parts[2] if parts[2] != 'UNKNOWN' else None
+                                        status = parts[3]
+                                        details = parts[4] if len(parts) > 4 else None
+                                        
+                                        logs.append({
+                                            'timestamp': timestamp,
+                                            'ip': ip,
+                                            'user': user,
+                                            'status': status,
+                                            'details': details
+                                        })
+                            except Exception as e:
+                                logger.error(f"Error parsing old format log line: {line}, error: {e}")
+                                continue
                         except Exception as e:
-                            logger.error(f"Error parsing old format log line: {line}, error: {e}")
+                            logger.error(f"Error parsing JSON log line: {line}, error: {e}")
                             continue
-                    except Exception as e:
-                        logger.error(f"Error parsing JSON log line: {line}, error: {e}")
-                        continue
-        
+            except Exception as e:
+                logger.error(f"Error reading log file: {e}")
         return jsonify({"logs": logs})
     except Exception as e:
-        logger.error(f"Error reading logs: {e}")
-        return jsonify({"logs": []}), 500
+        logger.error(f"Exception in admin_logs: {e}")
+        return jsonify({"error": "Failed to load logs"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=server_port, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
