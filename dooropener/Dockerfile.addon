@@ -1,9 +1,0 @@
-FROM ghcr.io/sloth-on-meth/dooropener:latest
-
-# Home Assistant add-on expects the app to run on 0.0.0.0 and port 6532 by default
-EXPOSE 6532
-
-# Use a simple shell script as entrypoint for config injection
-COPY run.sh /run.sh
-RUN chmod +x /run.sh
-ENTRYPOINT ["/run.sh"]
