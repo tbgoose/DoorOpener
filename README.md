@@ -62,18 +62,6 @@ docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/
 (Registry-based deployment is currently disabled)
 -->
 
-### Home Assistant Add-on
-
-You can run DoorOpener as a Home Assistant add-on:
-
-1. Copy the entire `addon/` directory into your Home Assistant add-ons folder (usually `/config/addons/local/dooropener`).
-2. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
-3. Click the three dots (⋮) and select **Repositories**. Add your repository if publishing, or just use "Local add-ons" if developing.
-4. Find "DoorOpener" in the add-on list and install it.
-5. Configure your Home Assistant URL, token, entity, and other options in the add-on config.
-6. Start the add-on and access the UI at `http://homeassistant.local:6532` or via Ingress.
-
-See `DOCS.md` for more detailed add-on instructions.
 
 ## Configuration
 
