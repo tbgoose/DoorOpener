@@ -62,8 +62,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
 
 # Configure secure session cookies
+# Allow overriding SESSION_COOKIE_SECURE via env for local HTTP/dev setups
+_secure_cookie = os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true'
 app.config.update(
-    SESSION_COOKIE_SECURE=True,  # Only send over HTTPS (reverse proxy handles this)
+    SESSION_COOKIE_SECURE=_secure_cookie,  # Only send over HTTPS when true
     SESSION_COOKIE_HTTPONLY=True,  # Prevent XSS access to cookies
     SESSION_COOKIE_SAMESITE='Lax',  # CSRF protection
     PERMANENT_SESSION_LIFETIME=timedelta(days=30)  # Default permanent session duration
@@ -158,6 +160,9 @@ def add_security_headers(response):
                                                    "style-src 'self' 'unsafe-inline'; "
                                                    "img-src 'self' data:; "
                                                    "font-src 'self'")
+    # Prevent caching of dynamic/admin JSON endpoints to avoid stale auth state
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
     # Don't add HSTS here since reverse proxy should handle HTTPS
     return response
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Door Opener v1.1</title>
+    <title>Admin - Door Opener v1.6</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -246,6 +246,8 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'same-origin',
+                cache: 'no-store',
                 body: JSON.stringify({ 
                     password: password,
                     remember_me: rememberMe
@@ -271,7 +273,7 @@
 
         // Check if already authenticated on page load
         function checkAuthentication() {
-            fetch('/admin/check-auth')
+            fetch('/admin/check-auth', { credentials: 'same-origin', cache: 'no-store' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.authenticated) {
@@ -291,7 +293,9 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                credentials: 'same-origin',
+                cache: 'no-store'
             })
             .then(response => response.json())
             .then(data => {
@@ -324,7 +328,7 @@
         function loadLogs() {
             if (!isAuthenticated) return;
             
-            fetch('/admin/logs')
+            fetch('/admin/logs', { credentials: 'same-origin', cache: 'no-store' })
                 .then(response => response.json())
                 .then(data => {
                     allLogs = data.logs || [];
