@@ -59,7 +59,14 @@ if not logger.handlers:
 # --- Flask App Setup ---
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', secrets.token_hex(32))
+# Prefer fixed secret from environment; fallback to temporary random (will be overridden by config.ini later if present)
+_env_secret = os.environ.get('FLASK_SECRET_KEY')
+if _env_secret:
+    app.secret_key = _env_secret
+    app.config['RANDOM_SECRET_WARNING'] = False
+else:
+    app.secret_key = secrets.token_hex(32)
+    app.config['RANDOM_SECRET_WARNING'] = True
 
 # Configure secure session cookies
 # Allow overriding SESSION_COOKIE_SECURE via env for local HTTP/dev setups
@@ -75,6 +82,21 @@ app.config.update(
 config = ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
 config.read(config_path)
+
+# If no env secret key was provided, allow overriding the temporary random with config.ini
+if not _env_secret:
+    try:
+        _cfg_secret = config.get('server', 'secret_key', fallback=None)
+        if _cfg_secret:
+            app.secret_key = _cfg_secret
+            app.config['RANDOM_SECRET_WARNING'] = False
+        elif app.config.get('RANDOM_SECRET_WARNING'):
+            logging.getLogger('dooropener').warning(
+                'FLASK_SECRET_KEY not set and no [server] secret_key in config.ini; '
+                'sessions may become invalid across restarts or multiple workers.'
+            )
+    except Exception:
+        pass
 
 # Per-user PINs from [pins] section
 user_pins = dict(config.items('pins')) if config.has_section('pins') else {}

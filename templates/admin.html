@@ -236,56 +236,68 @@
         let filteredLogs = [];
         let isAuthenticated = false;
 
-        function login() {
+        async function login() {
             const password = document.getElementById('adminPassword').value;
             const rememberMe = document.getElementById('rememberMe').checked;
             const errorDiv = document.getElementById('loginError');
-            
-            fetch('/admin/auth', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin',
-                cache: 'no-store',
-                body: JSON.stringify({ 
-                    password: password,
-                    remember_me: rememberMe
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
+
+            try {
+                const res = await fetch('/admin/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    body: JSON.stringify({ password, remember_me: rememberMe })
+                });
+                const data = await res.json();
                 if (data.status === 'success') {
-                    isAuthenticated = true;
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('dashboard').style.display = 'block';
-                    loadLogs();
+                    // Confirm session established before requesting logs
+                    const check = await fetch('/admin/check-auth', { credentials: 'same-origin', cache: 'no-store' });
+                    const checkData = await check.json();
+                    if (checkData.authenticated) {
+                        isAuthenticated = true;
+                        document.getElementById('loginForm').style.display = 'none';
+                        document.getElementById('dashboard').style.display = 'block';
+                        await loadLogs();
+                    } else {
+                        // Small retry if cookie not visible yet
+                        await new Promise(r => setTimeout(r, 150));
+                        const check2 = await fetch('/admin/check-auth', { credentials: 'same-origin', cache: 'no-store' });
+                        const checkData2 = await check2.json();
+                        if (checkData2.authenticated) {
+                            isAuthenticated = true;
+                            document.getElementById('loginForm').style.display = 'none';
+                            document.getElementById('dashboard').style.display = 'block';
+                            await loadLogs();
+                        } else {
+                            errorDiv.textContent = 'Login succeeded but session not established. Please try again.';
+                            errorDiv.style.display = 'block';
+                        }
+                    }
                 } else {
                     errorDiv.textContent = 'Invalid admin password';
                     errorDiv.style.display = 'block';
                 }
-            })
-            .catch(error => {
+            } catch (error) {
                 errorDiv.textContent = 'Error connecting to server';
                 errorDiv.style.display = 'block';
-            });
+            }
         }
 
         // Check if already authenticated on page load
-        function checkAuthentication() {
-            fetch('/admin/check-auth', { credentials: 'same-origin', cache: 'no-store' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.authenticated) {
-                        isAuthenticated = true;
-                        document.getElementById('loginForm').style.display = 'none';
-                        document.getElementById('dashboard').style.display = 'block';
-                        loadLogs();
-                    }
-                })
-                .catch(error => {
-                    // Silent fail - user not authenticated
-                });
+        async function checkAuthentication() {
+            try {
+                const res = await fetch('/admin/check-auth', { credentials: 'same-origin', cache: 'no-store' });
+                const data = await res.json();
+                if (data.authenticated) {
+                    isAuthenticated = true;
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    await loadLogs();
+                }
+            } catch (e) {
+                // Silent fail - user not authenticated
+            }
         }
 
         function logout() {
@@ -325,20 +337,22 @@
             });
         });
 
-        function loadLogs() {
-            if (!isAuthenticated) return;
-            
-            fetch('/admin/logs', { credentials: 'same-origin', cache: 'no-store' })
-                .then(response => response.json())
-                .then(data => {
-                    allLogs = data.logs || [];
-                    populateUserFilter();
-                    filterLogs();
-                })
-                .catch(error => {
-                    document.getElementById('logTableBody').innerHTML = 
-                        '<tr><td colspan="5" class="no-logs">Error loading logs</td></tr>';
-                });
+        let _loading = false;
+        async function loadLogs() {
+            if (!isAuthenticated || _loading) return;
+            _loading = true;
+            try {
+                const res = await fetch('/admin/logs', { credentials: 'same-origin', cache: 'no-store' });
+                const data = await res.json();
+                allLogs = data.logs || [];
+                populateUserFilter();
+                filterLogs();
+            } catch (e) {
+                document.getElementById('logTableBody').innerHTML = 
+                    '<tr><td colspan="5" class="no-logs">Error loading logs</td></tr>';
+            } finally {
+                _loading = false;
+            }
         }
 
         function populateUserFilter() {
