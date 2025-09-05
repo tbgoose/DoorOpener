@@ -10,7 +10,7 @@
 
 A secure web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
-![Version 1.5.0](https://img.shields.io/badge/version-1.5.0-blue?style=flat-square)
+![Version 1.6.0](https://img.shields.io/badge/version-1.6.0-blue?style=flat-square)
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
@@ -101,6 +101,36 @@ max_global_attempts_per_hour = 50  # Maximum global attempts per hour across all
 session_max_attempts = 3  # Maximum failed attempts per session before blocking
 ```
 
+### OIDC (Authentik) — Experimental
+
+> IMPORTANT: This OIDC/Authentik integration is a rudimentary, first-pass implementation. It has not been fully verified end‑to‑end in production. It may not work in your setup. Use at your own risk and please open issues/PRs with fixes.
+
+DoorOpener can optionally integrate with Authentik using in‑app OIDC. When enabled, users can sign in via SSO, and—optionally—open the door without a PIN.
+
+```ini
+[oidc]
+enabled = false                     # Set to true to enable OIDC
+issuer = https://auth.example.com/application/o/dooropener
+client_id = your_client_id
+client_secret = your_client_secret
+redirect_uri = https://your.domain/oidc/callback
+
+# Optional group required for admin dashboard access
+admin_group = dooropener-admins
+
+# Optional group allowed to open the door via OIDC (pinless)
+# Leave empty to allow any authenticated OIDC user
+user_group = dooropener-users
+
+# If true, OIDC users still must enter a PIN (no pinless open)
+require_pin_for_oidc = false
+```
+
+Notes:
+- In development over HTTP, set `SESSION_COOKIE_SECURE=false` (env) so the browser sends the session cookie.
+- Set a stable secret across instances via `FLASK_SECRET_KEY` (env) or `[server] secret_key` in `config.ini`.
+- The implementation is minimal and may require adjustments to claims (e.g., `groups`) depending on your Authentik setup.
+
 **Configuration Priority:**
 1. Environment variables (`.env` file) - highest priority
 2. `config.ini` settings
@@ -135,7 +165,7 @@ All security parameters are configurable via `config.ini`:
 ## API Endpoints
 
 - `GET /` - Main interface
-- `POST /open-door` - Door control (requires PIN)
+- `POST /open-door` - Door control (requires PIN unless OIDC pinless is enabled and user is authorized)
 - `GET /battery` - Battery level data
 - `GET /admin` - Admin dashboard
 
