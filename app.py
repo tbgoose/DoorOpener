@@ -13,10 +13,14 @@ import requests
 import secrets
 from datetime import datetime, timedelta
 from collections import defaultdict
-from flask import Flask, render_template, request, jsonify, session, abort
+from flask import Flask, render_template, request, jsonify, session, abort, redirect, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 from configparser import ConfigParser
 import pytz
+try:
+    from authlib.integrations.flask_client import OAuth
+except Exception:
+    OAuth = None
 
 # --- Timezone Setup ---
 # Get timezone from environment variable, default to UTC
@@ -107,6 +111,34 @@ admin_password = config.get('admin', 'admin_password', fallback='4384339380437ne
 # Server Configuration
 server_port = int(os.environ.get('DOOROPENER_PORT', config.getint('server', 'port', fallback=6532)))
 test_mode = config.getboolean('server', 'test_mode', fallback=False)
+
+# OIDC Configuration
+oidc_enabled = config.getboolean('oidc', 'enabled', fallback=False)
+oidc_issuer = config.get('oidc', 'issuer', fallback=None)
+oidc_client_id = config.get('oidc', 'client_id', fallback=None)
+oidc_client_secret = config.get('oidc', 'client_secret', fallback=None)
+oidc_redirect_uri = config.get('oidc', 'redirect_uri', fallback=None)
+oidc_admin_group = config.get('oidc', 'admin_group', fallback='')
+oidc_user_group = config.get('oidc', 'user_group', fallback='')
+require_pin_for_oidc = config.getboolean('oidc', 'require_pin_for_oidc', fallback=False)
+
+oauth = None
+if oidc_enabled and OAuth is not None and all([oidc_issuer, oidc_client_id, oidc_client_secret, oidc_redirect_uri]):
+    try:
+        oauth = OAuth(app)
+        oauth.register(
+            name='authentik',
+            server_metadata_url=f"{oidc_issuer}/.well-known/openid-configuration",
+            client_id=oidc_client_id,
+            client_secret=oidc_client_secret,
+            client_kwargs={
+                'scope': 'openid email profile groups'
+            }
+        )
+        logger.info('OIDC (Authentik) client registered')
+    except Exception as e:
+        logger.error(f'Failed to register OIDC client: {e}')
+        oauth = None
 
 # Home Assistant Configuration
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
@@ -239,7 +271,7 @@ def after_request(response):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', oidc_enabled=bool(oauth), require_pin_for_oidc=require_pin_for_oidc)
 
 @app.route('/battery')
 def battery():
@@ -341,12 +373,99 @@ def open_door():
             attempt_logger.info(json.dumps(log_entry))
             return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
 
-        # Get and validate PIN input
+        # Determine if OIDC session can open without PIN
+        oidc_auth = bool(session.get('oidc_authenticated'))
+        oidc_groups = session.get('oidc_groups', [])
+        oidc_user = session.get('oidc_user')
+        oidc_user_allowed = (not oidc_user_group) or (oidc_user_group in oidc_groups)
+
         data = request.get_json(force=True, silent=True)
+        pin_from_request = data.get('pin') if data else None
+
+        # If no PIN provided but OIDC user is authenticated and allowed, proceed without PIN
+        if (not pin_from_request) and oidc_auth and oidc_user_allowed and not require_pin_for_oidc:
+            matched_user = oidc_user or 'oidc-user'
+            # Reset failed attempts upon authorized OIDC use
+            ip_failed_attempts[identifier] = 0
+            session_failed_attempts[session_id] = 0
+            if identifier in ip_blocked_until:
+                del ip_blocked_until[identifier]
+            if session_id in session_blocked_until:
+                del session_blocked_until[session_id]
+
+            # Test or production flow mirrors the successful PIN path
+            if test_mode:
+                reason = 'Door opened (TEST MODE) via OIDC'
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": primary_ip,
+                    "session": session_id[:8],
+                    "user": matched_user,
+                    "status": "SUCCESS",
+                    "details": reason
+                }
+                attempt_logger.info(json.dumps(log_entry))
+                display_name = matched_user.capitalize() if isinstance(matched_user, str) else 'User'
+                return jsonify({"status": "success", "message": f"Door open command sent (TEST MODE).\nWelcome home, {display_name}!"})
+
+            try:
+                if entity_id.startswith('lock.'):
+                    url = f"{ha_url}/api/services/lock/unlock"
+                elif entity_id.startswith('input_boolean.'):
+                    url = f"{ha_url}/api/services/input_boolean/turn_on"
+                else:
+                    url = f"{ha_url}/api/services/switch/turn_on"
+                payload = {"entity_id": entity_id}
+                response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
+                response.raise_for_status()
+                if response.status_code == 200:
+                    reason = 'Door opened via OIDC'
+                    log_entry = {
+                        "timestamp": now.isoformat(),
+                        "ip": primary_ip,
+                        "session": session_id[:8],
+                        "user": matched_user,
+                        "status": "SUCCESS",
+                        "details": reason
+                    }
+                    attempt_logger.info(json.dumps(log_entry))
+                    display_name = matched_user.capitalize() if isinstance(matched_user, str) else 'User'
+                    return jsonify({"status": "success", "message": f"Door open command sent.\nWelcome home, {display_name}!"})
+                else:
+                    reason = f'Home Assistant API error: {response.status_code}'
+                    log_entry = {
+                        "timestamp": now.isoformat(),
+                        "ip": primary_ip,
+                        "session": session_id[:8],
+                        "user": matched_user,
+                        "status": "FAILURE",
+                        "details": reason
+                    }
+                    attempt_logger.info(json.dumps(log_entry))
+                    return jsonify({"status": "error", "message": reason}), 500
+            except requests.RequestException as e:
+                logger.error(f"Error communicating with Home Assistant: {e}")
+                return jsonify({"status": "error", "message": "Failed to contact Home Assistant"}), 502
+            except Exception as e:
+                import traceback
+                reason = 'Internal server error during API call'
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": primary_ip,
+                    "session": session_id[:8],
+                    "user": matched_user,
+                    "status": "API_FAILURE",
+                    "details": reason,
+                    "exception": str(e),
+                    "traceback": traceback.format_exc()
+                }
+                attempt_logger.info(json.dumps(log_entry))
+                return jsonify({"status": "error", "message": reason}), 500
+
+        # If we reach here, require a PIN (either because provided or policy demands it)
         if not data or 'pin' not in data:
             logger.warning("No PIN provided in request body")
             return jsonify({"status": "error", "message": "PIN required"}), 400
-        pin_from_request = data['pin']
         
         # Validate PIN format
         pin_valid, validated_pin = validate_pin_input(pin_from_request)
@@ -513,7 +632,60 @@ def open_door():
 
 @app.route('/admin')
 def admin():
-    return render_template('admin.html')
+    return render_template('admin.html', oidc_enabled=bool(oauth))
+
+# --- OIDC (Authentik) Routes ---
+@app.route('/login')
+def login_redirect():
+    if not oauth:
+        # Fallback to local login page
+        return redirect(url_for('admin'))
+    # Start OIDC flow
+    return oauth.authentik.authorize_redirect(redirect_uri=oidc_redirect_uri)
+
+@app.route('/oidc/callback')
+def oidc_callback():
+    if not oauth:
+        return redirect(url_for('admin'))
+    try:
+        token = oauth.authentik.authorize_access_token()
+        # Prefer ID token claims, fallback to userinfo
+        id_token = token.get('id_token')
+        claims = {}
+        try:
+            # Authlib stores parsed claims at token['userinfo'] or use userinfo() call
+            claims = token.get('userinfo') or oauth.authentik.parse_id_token(token)
+        except Exception:
+            try:
+                claims = oauth.authentik.userinfo(token=token)
+            except Exception:
+                claims = {}
+
+        user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
+        groups = claims.get('groups') or claims.get('roles') or []
+        if isinstance(groups, str):
+            groups = [g.strip() for g in groups.split(',') if g.strip()]
+
+        # Determine roles
+        is_admin = (not oidc_admin_group) or (oidc_admin_group in groups)
+        is_user_allowed = (not oidc_user_group) or (oidc_user_group in groups)
+
+        # Store OIDC session
+        session['oidc_authenticated'] = True
+        session['oidc_user'] = user
+        session['oidc_groups'] = groups
+
+        if is_admin:
+            session['admin_authenticated'] = True
+            session['admin_login_time'] = get_current_time().isoformat()
+            session['admin_user'] = user
+            return redirect(url_for('admin'))
+        else:
+            # Normal user login; redirect to home
+            return redirect(url_for('index'))
+    except Exception as e:
+        logger.error(f"OIDC callback error: {e}")
+        return abort(401)
 
 @app.route('/admin/auth', methods=['POST'])
 def admin_auth():
@@ -557,6 +729,17 @@ def admin_logout():
     session.pop('admin_login_time', None)
     session.permanent = False
     return jsonify({"status": "success", "message": "Logged out successfully"})
+
+@app.route('/auth/status')
+def auth_status():
+    """Return current authentication status and OIDC capability flags for UI."""
+    return jsonify({
+        "oidc_enabled": bool(oauth),
+        "oidc_authenticated": bool(session.get('oidc_authenticated')),
+        "user": session.get('oidc_user'),
+        "groups": session.get('oidc_groups', []),
+        "require_pin_for_oidc": require_pin_for_oidc,
+    })
 
 @app.route('/admin/logs')
 def admin_logs():

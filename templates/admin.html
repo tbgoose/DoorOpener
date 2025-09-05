@@ -173,6 +173,12 @@
                     </label>
                 </div>
                 <button onclick="login()" style="padding: 12px 24px; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s ease;">Login</button>
+                {% if oidc_enabled %}
+                <div style="margin: 1rem 0; color: rgba(0,0,0,0.6);">or</div>
+                <a href="/login" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #1976d2, #1565c0); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; text-decoration: none;">
+                    Login with SSO
+                </a>
+                {% endif %}
             </div>
             <div id="loginError" style="color: #c62828; margin-top: 1rem; display: none;"></div>
         </div>
