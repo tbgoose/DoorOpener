@@ -39,3 +39,4 @@ ENV/
 *.swo
 logs/
 .env
+*.log
