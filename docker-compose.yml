@@ -4,6 +4,8 @@ services:
     #   context: .
     #   dockerfile: Dockerfile
     image: ghcr.io/sloth-on-meth/dooropener:latest
+    env_file: 
+    - .env
     environment:
       - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
       - TZ=${TZ:-Europe/Amsterdam}

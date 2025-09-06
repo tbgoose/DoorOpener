@@ -91,14 +91,20 @@ bob = 5678
 admin_password = secure_password
 
 [server]
-port = 6532  # Overridden by DOOROPENER_PORT env var if set
-test_mode = false  # Set to true for testing without opening door
+# Overridden by DOOROPENER_PORT env var if set
+port = 6532
+# Set to true for testing without opening door
+test_mode = false
 
 [security]
-max_attempts = 5  # Maximum failed attempts per IP before blocking
-block_time_minutes = 5  # Block time in minutes after max attempts reached
-max_global_attempts_per_hour = 50  # Maximum global attempts per hour across all users
-session_max_attempts = 3  # Maximum failed attempts per session before blocking
+# Maximum failed attempts per IP before blocking
+max_attempts = 5 
+# Block time in minutes after max attempts reached
+block_time_minutes = 5
+# Maximum global attempts per hour across all users
+max_global_attempts_per_hour = 50
+# Maximum failed attempts per session before blocking
+session_max_attempts = 3
 ```
 
 ### OIDC (Authentik) — Experimental
