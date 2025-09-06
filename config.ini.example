@@ -7,9 +7,10 @@ token = your_long_lived_access_token_here
 switch_entity = switch.dooropener_zigbee
 
 [pins]
+# Set your door opener PIN here
 alice = 1234
 bob = 5678
-charlie = 9012  # Set your door opener PIN here
+charlie = 9012
 
 [admin]
 admin_password = admin123
