@@ -539,6 +539,41 @@
             });
         }
         
+        function openDoorWithSSO() {
+            // No PIN payload; rely on server-side OIDC session
+            fetch('/open-door', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                cache: 'no-store',
+                body: JSON.stringify({})
+            })
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                if (status === 200 && data.status === 'success') {
+                    showStatus('Success: ' + data.message, 'success');
+                    playSuccessSound();
+                    if (window.navigator.vibrate) window.navigator.vibrate([50,30,150,50,80,30,200]);
+                } else {
+                    showStatus('Error: ' + (data && data.message ? data.message : 'Unknown error'), 'error');
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                    submitBtn.textContent = '✗';
+                    playFailureSound();
+                    showAccessDeniedPopup();
+                    if (window.navigator.vibrate) window.navigator.vibrate([200,100,200,100,300]);
+                }
+            })
+            .catch(() => showStatus('Error: Could not connect to server', 'error'))
+            .finally(() => {
+                setTimeout(() => {
+                    const submitBtn = document.getElementById('submitBtn');
+                    submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                    submitBtn.textContent = '✓';
+                }, 1200);
+            });
+        }
+        
         function showStatus(message, type, persistent) {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
