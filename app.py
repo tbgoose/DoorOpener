@@ -716,9 +716,25 @@ def oidc_callback():
         if isinstance(groups, str):
             groups = [g.strip() for g in groups.split(',') if g.strip()]
 
-        # Determine roles based on group membership
-        is_admin = (not oidc_admin_group) or (oidc_admin_group in groups)
-        is_user_allowed = (not oidc_user_group) or (oidc_user_group in groups)
+        # Validate groups if they are defined in the configuration
+        if oidc_admin_group or oidc_user_group:
+            if not groups:
+                logger.error("No groups found in ID token")
+                abort(403, "Access denied: No groups found")
+            
+            # Check if the user is in the admin group
+            is_admin = oidc_admin_group in groups if oidc_admin_group else False
+            
+            # Check if the user is in the allowed user group
+            is_user_allowed = oidc_user_group in groups if oidc_user_group else True
+
+            if not is_user_allowed:
+                logger.error(f"User {user} is not in the allowed group")
+                abort(403, "Access denied: User not in allowed group")
+        else:
+            # If no groups are defined in the config, allow access based on OIDC provider
+            is_admin = False
+            is_user_allowed = True
 
         # Store OIDC session information
         session['oidc_authenticated'] = True
