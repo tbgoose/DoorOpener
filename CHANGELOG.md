@@ -33,6 +33,10 @@
 - `.env.example` updated with new envs.
 - `config.ini.example` gains optional `[oidc] public_key` for local token signature validation.
 
+### 🙏 Acknowledgements
+- Thanks to @hanneshier for the idea and contributions around the OIDC flow.
+- Thanks to @remijn for fixing my docker build flow
+
 ---
 
 ## v[1.6.0] - 2025-09-04
