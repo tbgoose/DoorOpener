@@ -133,10 +133,12 @@ if oidc_enabled and OAuth is not None and all([oidc_issuer, oidc_client_id, oidc
             client_id=oidc_client_id,
             client_secret=oidc_client_secret,
             client_kwargs={
-                'scope': 'openid email profile groups'
+                'scope': 'openid email profile groups',
+                # PKCE aktivieren
+                'code_challenge_method': 'S256'
             }
         )
-        logger.info('OIDC (Authentik) client registered')
+        logger.info('OIDC (Authentik) client registered with PKCE support')
     except Exception as e:
         logger.error(f'Failed to register OIDC client: {e}')
         oauth = None
