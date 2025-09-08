@@ -11,7 +11,7 @@ import time
 import logging
 import requests
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session, abort, redirect, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -19,6 +19,7 @@ from configparser import ConfigParser
 import pytz
 try:
     from authlib.integrations.flask_client import OAuth
+    from authlib.jose import jwt
 except Exception:
     OAuth = None
 
@@ -132,10 +133,12 @@ if oidc_enabled and OAuth is not None and all([oidc_issuer, oidc_client_id, oidc
             client_id=oidc_client_id,
             client_secret=oidc_client_secret,
             client_kwargs={
-                'scope': 'openid email profile groups'
+                'scope': 'openid email profile groups',
+                # Enable PKCE
+                'code_challenge_method': 'S256'
             }
         )
-        logger.info('OIDC (Authentik) client registered')
+        logger.info('OIDC (Authentik) client registered with PKCE support')
     except Exception as e:
         logger.error(f'Failed to register OIDC client: {e}')
         oauth = None
@@ -375,6 +378,19 @@ def open_door():
 
         # Determine if OIDC session can open without PIN
         oidc_auth = bool(session.get('oidc_authenticated'))
+        oidc_exp = session.get('oidc_exp')
+
+        # Check token expiration
+        if oidc_auth and (not oidc_exp or oidc_exp < time.time()):
+            # OIDC session has expired, clear all relevant session data
+            session.pop('oidc_authenticated', None)
+            session.pop('oidc_user', None)
+            session.pop('oidc_groups', None)
+            session.pop('oidc_exp', None)
+            oidc_auth = False # Reset flag for the rest of the function
+            logger.warning(f"OIDC session for IP {primary_ip} has expired. Re-authentication required.")
+            # Optional: Could return an error directly, but we let it fall through to the PIN check
+        
         oidc_groups = session.get('oidc_groups', [])
         oidc_user = session.get('oidc_user')
         oidc_user_allowed = (not oidc_user_group) or (oidc_user_group in oidc_groups)
@@ -640,16 +656,33 @@ def login_redirect():
     if not oauth:
         # Fallback to local login page
         return redirect(url_for('admin'))
-    # Start OIDC flow
-    return oauth.authentik.authorize_redirect(redirect_uri=oidc_redirect_uri)
+    
+    # Generate a random state and store it in the session
+    session['oidc_state'] = secrets.token_hex(16)
+    
+    # Generate a random nonce and store it in the session
+    session['oidc_nonce'] = secrets.token_hex(16)
+    
+    # Start OIDC flow with the generated state and nonce
+    return oauth.authentik.authorize_redirect(
+        redirect_uri=oidc_redirect_uri,
+        state=session['oidc_state'],
+        nonce=session['oidc_nonce']
+    )
 
 @app.route('/oidc/callback')
 def oidc_callback():
     if not oauth:
         return redirect(url_for('admin'))
     try:
+        # Validate the state parameter to prevent CSRF attacks
+        if request.args.get('state') != session.pop('oidc_state', None):
+            abort(401, "Invalid state")
+        
+        # Authorize the access token from the OIDC provider
         token = oauth.authentik.authorize_access_token()
-        # Prefer ID token claims, fallback to userinfo
+        
+        # Extract the ID token and claims
         id_token = token.get('id_token')
         claims = {}
         try:
@@ -661,28 +694,77 @@ def oidc_callback():
             except Exception:
                 claims = {}
 
+        # Validate the nonce value to prevent replay attacks
+        if claims.get('nonce') != session.pop('oidc_nonce', None):
+            abort(401, "Invalid nonce")
+
+        # Verify the ID token signature and claims
+        public_key = config.get('oidc', 'public_key', fallback=None)
+        if public_key:
+            try:
+                claims = jwt.decode(id_token, key=public_key)
+                # Validate signature, expiration, audience, etc.
+                claims.validate()
+            except Exception as e:
+                logger.error(f"ID token validation error: {e}")
+                return abort(401)
+
+        # Validate the audience (aud) claim to ensure the token is intended for this application
+        if claims.get('aud') != oidc_client_id:
+            logger.error(f"Invalid audience: {claims.get('aud')}")
+            abort(401, "Invalid audience")
+
+        # Validate the expiration time (exp) claim to ensure the token is still valid
+        exp = claims.get('exp')
+        if exp:
+            expiration_time = datetime.fromtimestamp(exp, tz=timezone.utc)
+            if expiration_time < datetime.now(timezone.utc):
+                logger.error("ID token has expired")
+                abort(401, "Token has expired")
+
+        # Reset the session to prevent session fixation attacks
+        session.clear()
+
+        # Extract user information from the claims
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
         groups = claims.get('groups') or claims.get('roles') or []
         if isinstance(groups, str):
             groups = [g.strip() for g in groups.split(',') if g.strip()]
 
-        # Determine roles
-        is_admin = (not oidc_admin_group) or (oidc_admin_group in groups)
-        is_user_allowed = (not oidc_user_group) or (oidc_user_group in groups)
+        # Validate groups if they are defined in the configuration
+        if oidc_admin_group or oidc_user_group:
+            if not groups:
+                logger.error("No groups found in ID token")
+                abort(403, "Access denied: No groups found")
+            
+            # Check if the user is in the admin group
+            is_admin = oidc_admin_group in groups if oidc_admin_group else False
+            
+            # Check if the user is in the allowed user group
+            is_user_allowed = oidc_user_group in groups if oidc_user_group else True
 
-        # Store OIDC session
+            if not is_user_allowed:
+                logger.error(f"User {user} is not in the allowed group")
+                abort(403, "Access denied: User not in allowed group")
+        else:
+            # If no groups are defined in the config, allow access based on OIDC provider
+            is_admin = False
+            is_user_allowed = True
+
+        # Store OIDC session information
         session['oidc_authenticated'] = True
         session['oidc_user'] = user
         session['oidc_groups'] = groups
+        session['oidc_exp'] = claims.get('exp') # Store token expiration time
 
+        # If the user is an admin, set the admin flags in the session.
         if is_admin:
             session['admin_authenticated'] = True
             session['admin_login_time'] = get_current_time().isoformat()
             session['admin_user'] = user
-            return redirect(url_for('admin'))
-        else:
-            # Normal user login; redirect to home
-            return redirect(url_for('index'))
+        
+        # All users are redirected to the home page after login.
+        return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"OIDC callback error: {e}")
         return abort(401)
@@ -803,6 +885,37 @@ def admin_logs():
     except Exception as e:
         logger.error(f"Exception in admin_logs: {e}")
         return jsonify({"error": "Failed to load logs"}), 500
+
+@app.route('/oidc/logout')
+def oidc_logout():
+    """Logout from OIDC and clear session"""
+    if oauth:
+        try:
+            # Clear the local session
+            session.clear()
+
+            # Fetch the .well-known configuration
+            well_known_url = f"{oidc_issuer}/.well-known/openid-configuration"
+            response = requests.get(well_known_url, timeout=10)
+            if response.status_code == 200:
+                config = response.json()
+                logout_url = config.get('end_session_endpoint')
+                if logout_url:
+                    # Redirect to the OIDC provider's logout endpoint
+                    return redirect(f"{logout_url}?redirect_uri={url_for('index', _external=True)}")
+                else:
+                    logger.error("Logout URL not found in .well-known configuration")
+                    return jsonify({"status": "error", "message": "Logout URL not found"}), 500
+            else:
+                logger.error(f"Failed to fetch .well-known configuration: {response.status_code}")
+                return jsonify({"status": "error", "message": "Failed to fetch OIDC configuration"}), 500
+        except Exception as e:
+            logger.error(f"Error during OIDC logout: {e}")
+            return jsonify({"status": "error", "message": "Failed to logout"}), 500
+    else:
+        # If OIDC is not enabled, just clear the session
+        session.clear()
+        return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=server_port, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
