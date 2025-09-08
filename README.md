@@ -13,7 +13,7 @@
 
 A web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
-![Version 1.6.0](https://img.shields.io/badge/version-1.6.0-blue?style=flat-square)
+![Version 1.7.0](https://img.shields.io/badge/version-1.7.0-blue?style=flat-square)
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
@@ -37,19 +37,35 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 
 ### Docker (Recommended)
 
-You can run DoorOpener using the prebuilt image from GitHub Container Registry (ghcr.io):
+Use Docker Compose (recommended). It handles environment, volumes, and permissions cleanly.
 
-```bash
-git clone https://github.com/Sloth-on-meth/DoorOpener.git
-cd DoorOpener
-cp config.ini.example config.ini
-cp .env.example .env
-# Edit config.ini with your Home Assistant details and PINs
-# Edit .env to set DOOROPENER_PORT if different from 6532
-docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/logs:/app/logs -p 6532:6532 ghcr.io/sloth-on-meth/dooropener:latest
+```yaml
+version: "3.8"
+services:
+  dooropener:
+    image: ghcr.io/sloth-on-meth/dooropener:latest
+    container_name: dooropener
+    environment:
+      - DOOROPENER_PORT=${DOOROPENER_PORT:-6532}
+      - TZ=${TZ:-UTC}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - UMASK=${UMASK:-002}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
+    ports:
+      - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
+    volumes:
+      - ./config.ini:/app/config.ini:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
 ```
 
-This will start DoorOpener using the official image. If you need to change the port, update the .env file and adjust the `-p` argument accordingly.
+Steps:
+1. `git clone https://github.com/Sloth-on-meth/DoorOpener.git && cd DoorOpener`
+2. `cp config.ini.example config.ini` and edit it.
+3. `cp .env.example .env` and adjust values (TZ, PUID/PGID, etc.).
+4. `docker compose up -d`
 
 #### Building Locally (Optional)
 If you want to build the image yourself:
@@ -57,6 +73,8 @@ If you want to build the image yourself:
 docker build -t dooropener:latest .
 docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/logs:/app/logs -p 6532:6532 dooropener:latest
 ```
+
+ 
 
 
 <!--

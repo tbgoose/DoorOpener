@@ -50,6 +50,25 @@ def test_global_rate_limit_blocks(client, app_module):
     resp = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
     assert resp.status_code == 429
 
+def test_open_door_session_blocked_flow(client, app_module, monkeypatch):
+    # Trigger session id creation
+    client.post('/open-door', data=json.dumps({}), headers=_std_headers())
+    with client.session_transaction() as s:
+        sid = s.get('_session_id')
+    assert sid
+    # Block this session
+    app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(seconds=60)
+    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    assert r.status_code == 429
+
+
+def test_open_door_ip_blocked_flow(client, app_module, monkeypatch):
+    # Force known identifiers from helper
+    monkeypatch.setattr(app_module, 'get_client_identifier', lambda: ('9.9.9.9', 'sessX', 'idkeyX'))
+    app_module.ip_blocked_until['idkeyX'] = app_module.get_current_time() + timedelta(seconds=60)
+    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    assert r.status_code == 429
+
 
 def test_admin_auth_blocking(client, app_module, monkeypatch):
     # Make wrong password repeatedly and ensure session becomes blocked
@@ -77,6 +96,65 @@ def test_admin_auth_success(client, app_module, monkeypatch):
     assert r2.status_code == 200
     data = r2.get_json()
     assert data.get('authenticated') is True
+
+
+def test_testmode_pin_success(client, app_module):
+    app_module.user_pins['alice'] = '1234'
+    app_module.test_mode = True
+    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    assert r.status_code == 200
+    assert 'TEST MODE' in r.get_json().get('message', '')
+
+
+def test_admin_logout_endpoint(client):
+    # Authenticate first
+    with client.session_transaction() as s:
+        s['admin_authenticated'] = True
+        s['admin_login_time'] = datetime.now(timezone.utc).isoformat()
+    r = client.post('/admin/logout')
+    assert r.status_code == 200
+    # Confirm logged out
+    r2 = client.get('/admin/check-auth')
+    assert r2.status_code == 200
+    assert r2.get_json().get('authenticated') is False
+
+
+def test_oidc_logout_enabled_redirect(client, app_module, monkeypatch):
+    # Make OIDC appear enabled
+    class _DummyOAuth:
+        pass
+    app_module.oauth = _DummyOAuth()
+    app_module.oidc_issuer = 'https://auth.example.com'
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {'end_session_endpoint': 'https://auth.example.com/logout'}
+    with patch('requests.get', return_value=mock_resp):
+        r = client.get('/oidc/logout', follow_redirects=False)
+        assert r.status_code in (302, 303)
+        assert r.headers.get('Location', '').startswith('https://auth.example.com/logout')
+
+
+def test_admin_page_renders(client):
+    r = client.get('/admin')
+    assert r.status_code == 200
+
+
+def test_battery_non200_returns_none(client, monkeypatch):
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.text = 'error'
+    with patch('requests.get', return_value=mock_response):
+        response = client.get('/battery')
+        assert response.status_code == 200
+        assert response.get_json()['level'] is None
+
+
+def test_battery_exception_returns_none(client, monkeypatch):
+    with patch('requests.get', side_effect=Exception('boom')):
+        response = client.get('/battery')
+        assert response.status_code == 200
+        assert response.get_json()['level'] is None
 
 
 def test_auth_status_oidc_disabled_ignores_stale_session(client):

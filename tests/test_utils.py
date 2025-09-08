@@ -1,4 +1,5 @@
-"""Test utilities for DoorOpener application."""
+"""Additional tests to exercise helper utilities used in the suite."""
+import json
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
@@ -24,17 +25,17 @@ TEST_CONFIG = {
 }
 
 class MockResponse:
-    """Mock response for requests.get()."""
+    """Mock response object used in tests."""
     def __init__(self, status_code=200, json_data=None, text=None):
         self.status_code = status_code
         self._json = json_data or {}
-        self.text = text or json.dumps(json_data) if json_data else ''
+        self.text = text or (json.dumps(json_data) if json_data else '')
 
     def json(self):
         return self._json
 
 def setup_test_config(mock_config):
-    """Setup mock configuration for testing."""
+    """Setup mock configuration for testing configparser access."""
     mock_config.return_value = MagicMock()
     mock_config.return_value.has_section.return_value = True
     
@@ -53,3 +54,24 @@ def setup_test_config(mock_config):
     
     mock_config.return_value.getboolean.side_effect = get_boolean
     mock_config.return_value.getint.side_effect = lambda s, k, **kw: int(config_get(s, k, **kw) or 0)
+
+
+# --- Actual tests for coverage ---
+
+def test_mock_response_json():
+    r = MockResponse(status_code=201, json_data={'x': 1})
+    assert r.status_code == 201
+    assert r.json() == {'x': 1}
+    assert '1' in r.text
+
+
+def test_setup_test_config_reads_values():
+    with patch('configparser.ConfigParser') as cfg:
+        setup_test_config(cfg)
+        inst = cfg.return_value
+        # pins section present
+        assert inst.has_section('pins') is True
+        # get returns configured values or fallback
+        assert inst.get('server', 'port', fallback='0') == '5000'
+        assert inst.getboolean('server', 'test_mode', fallback=False) is True
+        assert inst.getint('server', 'port', fallback=0) == 5000
