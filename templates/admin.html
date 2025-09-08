@@ -66,6 +66,15 @@
             flex-wrap: wrap;
             align-items: center;
         }
+        /* Responsive table wrapper */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.15);
+        }
         .control-group {
             display: flex;
             align-items: center;
@@ -105,6 +114,8 @@
             border-radius: 12px;
             overflow: hidden;
             backdrop-filter: blur(10px);
+            table-layout: auto;
+            min-width: 720px; /* ensure columns visible and allow horizontal scroll */
         }
         .log-table th {
             background: rgba(255,255,255,0.3);
@@ -118,6 +129,8 @@
             padding: 10px 12px;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             color: rgba(0,0,0,0.8);
+            word-break: break-word;
+            vertical-align: top;
         }
         .log-table tr:hover {
             background: rgba(255,255,255,0.1);
@@ -148,13 +161,36 @@
             .control-group {
                 justify-content: space-between;
             }
-            .log-table {
-                font-size: 0.9rem;
-            }
+            .log-table { font-size: 0.95rem; }
             .log-table th,
             .log-table td {
                 padding: 8px;
             }
+        }
+
+        /* Card-style table for very small screens */
+        @media (max-width: 520px) {
+            .log-table,
+            .log-table thead,
+            .log-table tbody,
+            .log-table th,
+            .log-table td,
+            .log-table tr { display: block; width: 100%; }
+
+            .log-table thead { display: none; }
+            .log-table tr { margin: 0 0 12px 0; border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; background: rgba(255,255,255,0.25); }
+            .log-table td { position: relative; padding-left: 44%; min-height: 42px; }
+            .log-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 12px;
+                top: 10px;
+                width: 38%;
+                font-weight: 600;
+                color: rgba(0,0,0,0.7);
+                white-space: normal;
+            }
+            .log-table td.no-logs { padding-left: 12px; }
         }
     </style>
 </head>
@@ -216,7 +252,7 @@
                 <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
             </div>
 
-            <div id="logContainer">
+            <div id="logContainer" class="table-responsive">
             <table class="log-table">
                 <thead>
                     <tr>
@@ -435,11 +471,11 @@
                 
                 return `
                     <tr>
-                        <td>${timestamp}</td>
-                        <td>${log.ip}</td>
-                        <td>${log.user || 'UNKNOWN'}</td>
-                        <td class="${statusClass}">${log.status}</td>
-                        <td>${log.details || '-'}</td>
+                        <td data-label="Timestamp">${timestamp}</td>
+                        <td data-label="IP Address">${log.ip}</td>
+                        <td data-label="User">${log.user || 'UNKNOWN'}</td>
+                        <td class="${statusClass}" data-label="Status">${log.status}</td>
+                        <td data-label="Details">${log.details || '-'}</td>
                     </tr>
                 `;
             }).join('');
