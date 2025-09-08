@@ -1,5 +1,4 @@
 # 🚨 Help Wanted: 
-
 ## Home Assistant Add-on Needed!
 **I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
 
@@ -76,8 +75,31 @@ docker run -d --env-file .env -v $(pwd)/config.ini:/app/config.ini:ro -v $(pwd)/
 DOOROPENER_PORT=6532
 
 # Timezone (optional, defaults to UTC)
-TZ=America/New_York
+TZ=Europe/Amsterdam
+
+# Map the runtime user/group inside the container to your host user
+# Helps the app write to ./logs without manual chown
+PUID=1000
+PGID=1000
+
+# Default permissions for created files/dirs
+UMASK=002
+
+# Security/session settings (strongly recommended in production)
+FLASK_SECRET_KEY=please-change-me
+# When running behind HTTPS (reverse proxy), leave as true
+# For local HTTP testing only, set to false so cookies are sent
+SESSION_COOKIE_SECURE=true
 ```
+
+### PUID/PGID and permissions (linuxserver-style)
+
+This image supports `PUID`, `PGID` and `UMASK` to avoid host-side chown. On startup, the entrypoint aligns the runtime user/group to those IDs and ensures `/app/logs` is writable, then drops privileges. Keep `config.ini` mounted read-only and bind `./logs` to persist logs.
+
+### Logs
+
+- Application access logs: `/app/logs/log.txt` (bind mount `./logs:/app/logs`)
+- Gunicorn/access output: container stdout/stderr (visible via `docker logs`)
 
 ### Application Config (config.ini)
 
