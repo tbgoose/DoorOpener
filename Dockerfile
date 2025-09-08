@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install minimal tools for user/group management and privilege drop
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu shadow ca-certificates curl \
+    && apt-get install -y --no-install-recommends gosu passwd ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
