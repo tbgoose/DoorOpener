@@ -645,11 +645,14 @@ def login_redirect():
     # Generate a random state and store it in the session
     session['oidc_state'] = secrets.token_hex(16)
     
-    # Start OIDC flow with the generated state
+    # Generate a random nonce and store it in the session
+    session['oidc_nonce'] = secrets.token_hex(16)
+    
+    # Start OIDC flow with the generated state and nonce
     return oauth.authentik.authorize_redirect(
         redirect_uri=oidc_redirect_uri,
         state=session['oidc_state'],
-        nonce=session['oidc_nonce']  # Nonce already implemented
+        nonce=session['oidc_nonce']
     )
 
 @app.route('/oidc/callback')
