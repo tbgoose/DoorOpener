@@ -702,13 +702,13 @@ def oidc_callback():
         # Validate the expiration time (exp) claim to ensure the token is still valid
         exp = claims.get('exp')
         if exp:
-            # Convert the expiration timestamp to a timezone-aware datetime object
             expiration_time = datetime.fromtimestamp(exp, tz=timezone.utc)
-            
-            # Compare with the current UTC time (also timezone-aware)
             if expiration_time < datetime.now(timezone.utc):
                 logger.error("ID token has expired")
                 abort(401, "Token has expired")
+
+        # Reset the session to prevent session fixation attacks
+        session.clear()
 
         # Extract user information from the claims
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
