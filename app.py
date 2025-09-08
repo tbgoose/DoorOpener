@@ -667,6 +667,9 @@ def oidc_callback():
         # Authorize the access token from the OIDC provider
         token = oauth.authentik.authorize_access_token()
         
+        # Store the access token in the session
+        session['access_token'] = token.get('access_token')
+
         # Extract the ID token and claims
         id_token = token.get('id_token')
         claims = {}
@@ -710,42 +713,16 @@ def oidc_callback():
         # Reset the session to prevent session fixation attacks
         session.clear()
 
-        # Extract user information from the claims
-        user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
-        groups = claims.get('groups') or claims.get('roles') or []
-        if isinstance(groups, str):
-            groups = [g.strip() for g in groups.split(',') if g.strip()]
-
-        # Validate groups if they are defined in the configuration
-        if oidc_admin_group or oidc_user_group:
-            if not groups:
-                logger.error("No groups found in ID token")
-                abort(403, "Access denied: No groups found")
-            
-            # Check if the user is in the admin group
-            is_admin = oidc_admin_group in groups if oidc_admin_group else False
-            
-            # Check if the user is in the allowed user group
-            is_user_allowed = oidc_user_group in groups if oidc_user_group else True
-
-            if not is_user_allowed:
-                logger.error(f"User {user} is not in the allowed group")
-                abort(403, "Access denied: User not in allowed group")
-        else:
-            # If no groups are defined in the config, allow access based on OIDC provider
-            is_admin = False
-            is_user_allowed = True
-
         # Store OIDC session information
         session['oidc_authenticated'] = True
-        session['oidc_user'] = user
-        session['oidc_groups'] = groups
+        session['oidc_user'] = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
+        session['oidc_groups'] = claims.get('groups') or claims.get('roles') or []
 
         # Redirect to admin page if the user is an admin
-        if is_admin:
+        if oidc_admin_group in session['oidc_groups']:
             session['admin_authenticated'] = True
             session['admin_login_time'] = get_current_time().isoformat()
-            session['admin_user'] = user
+            session['admin_user'] = session['oidc_user']
             return redirect(url_for('admin'))
         else:
             # Redirect to the home page for normal users
@@ -870,6 +847,36 @@ def admin_logs():
     except Exception as e:
         logger.error(f"Exception in admin_logs: {e}")
         return jsonify({"error": "Failed to load logs"}), 500
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    if not oauth:
+        return jsonify({"status": "error", "message": "OIDC not configured"}), 400
+
+    # Get the access token from the session
+    token = session.get('access_token')
+    if not token:
+        return jsonify({"status": "error", "message": "No token found"}), 400
+
+    try:
+        # Revoke the token using the OIDC provider's revocation endpoint
+        revoke_url = f"{oidc_issuer}/revoke"
+        response = requests.post(
+            revoke_url,
+            data={"token": token, "token_type_hint": "access_token"},
+            auth=(oidc_client_id, oidc_client_secret),
+            timeout=10
+        )
+        if response.status_code == 200:
+            # Clear the session after successful revocation
+            session.clear()
+            return jsonify({"status": "success", "message": "Logged out and token revoked"})
+        else:
+            logger.error(f"Failed to revoke token: {response.status_code} {response.text}")
+            return jsonify({"status": "error", "message": "Failed to revoke token"}), 400
+    except Exception as e:
+        logger.error(f"Exception during token revocation: {e}")
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=server_port, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
