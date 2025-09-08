@@ -19,6 +19,9 @@ def test_auth_status_defaults(client=None):
 
 
 def test_auth_status_with_session():
+    # Simulate OIDC being enabled by providing a truthy oauth object
+    import app as app_module
+    app_module.oauth = object()
     client = make_client()
     with client.session_transaction() as s:
         s['oidc_authenticated'] = True

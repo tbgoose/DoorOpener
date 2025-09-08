@@ -377,7 +377,8 @@ def open_door():
             return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
 
         # Determine if OIDC session can open without PIN
-        oidc_auth = bool(session.get('oidc_authenticated'))
+        # OIDC must be fully enabled (oauth registered), otherwise treat as unauthenticated
+        oidc_auth = bool(oauth) and bool(session.get('oidc_authenticated'))
         oidc_exp = session.get('oidc_exp')
 
         # Check token expiration
@@ -816,11 +817,13 @@ def admin_logout():
 @app.route('/auth/status')
 def auth_status():
     """Return current authentication status and OIDC capability flags for UI."""
+    enabled = bool(oauth)
+    authenticated = enabled and bool(session.get('oidc_authenticated'))
     return jsonify({
-        "oidc_enabled": bool(oauth),
-        "oidc_authenticated": bool(session.get('oidc_authenticated')),
-        "user": session.get('oidc_user'),
-        "groups": session.get('oidc_groups', []),
+        "oidc_enabled": enabled,
+        "oidc_authenticated": authenticated,
+        "user": session.get('oidc_user') if authenticated else None,
+        "groups": session.get('oidc_groups', []) if authenticated else [],
         "require_pin_for_oidc": require_pin_for_oidc,
     })
 
