@@ -6,13 +6,13 @@
 > **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker, pip, etc).
 
 ## Security audit needed!
-i am not the best at this, and i implemented some security features, but i honestly do not know how secure the OIDC implementation is. looking for someone with experience to go over it. 
+> i am not the best at this, and i implemented some security features, but i honestly do not know how secure the OIDC implementation is. looking for someone with experience to go over it. 
 
 ---
 
 # 🚪 DoorOpener
 
-A secure web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
+A web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
 ![Version 1.6.0](https://img.shields.io/badge/version-1.6.0-blue?style=flat-square)
 
