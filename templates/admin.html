@@ -192,6 +192,15 @@
             }
             .log-table td.no-logs { padding-left: 12px; }
         }
+
+        /* Compact mode: reduced spacing and slightly smaller text */
+        #dashboard.compact .log-table { font-size: 0.85rem; }
+        #dashboard.compact .log-table th,
+        #dashboard.compact .log-table td { padding: 6px 8px; }
+        @media (max-width: 520px) {
+            #dashboard.compact .log-table td { padding-left: 38%; min-height: 36px; }
+            #dashboard.compact .log-table td::before { left: 10px; width: 34%; font-size: 0.9em; }
+        }
     </style>
 </head>
 <body>
@@ -248,6 +257,13 @@
                     <option value="SUCCESS">Success</option>
                     <option value="FAILURE">Failure</option>
                 </select>
+            </div>
+            <div class="control-group">
+                <label for="compactToggle">Density:</label>
+                <label style="display:flex; align-items:center; gap:0.5rem;">
+                    <input type="checkbox" id="compactToggle" onchange="toggleCompact(event)" />
+                    Compact
+                </label>
             </div>
                 <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
             </div>
@@ -371,6 +387,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Check authentication on page load
             checkAuthentication();
+            // Apply compact preference
+            applyCompactFromStorage();
             
             document.getElementById('adminPassword').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -479,6 +497,22 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function toggleCompact(ev) {
+            const enabled = !!ev.target.checked;
+            const dash = document.getElementById('dashboard');
+            dash.classList.toggle('compact', enabled);
+            try { localStorage.setItem('admin_compact', enabled ? '1' : '0'); } catch (e) {}
+        }
+
+        function applyCompactFromStorage() {
+            let enabled = false;
+            try { enabled = localStorage.getItem('admin_compact') === '1'; } catch (e) {}
+            const checkbox = document.getElementById('compactToggle');
+            if (checkbox) checkbox.checked = enabled;
+            const dash = document.getElementById('dashboard');
+            dash.classList.toggle('compact', enabled);
         }
 
         // Load logs on page load
