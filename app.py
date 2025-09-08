@@ -664,8 +664,9 @@ def login_redirect():
     session['oidc_nonce'] = secrets.token_hex(16)
     
     # Start OIDC flow with the generated state and nonce
+    _redirect_uri = oidc_redirect_uri or url_for('oidc_callback', _external=True)
     return oauth.authentik.authorize_redirect(
-        redirect_uri=oidc_redirect_uri,
+        redirect_uri=_redirect_uri,
         state=session['oidc_state'],
         nonce=session['oidc_nonce']
     )

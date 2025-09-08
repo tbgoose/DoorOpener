@@ -59,3 +59,7 @@ user_group = dooropener-users
 
 # If true, even OIDC users must enter a PIN; if false, OIDC users can open without PIN
 require_pin_for_oidc = false
+
+# Optional: PEM-encoded public key to validate ID token signatures locally
+# Not required if your environment relies on dynamic JWKS validation via your proxy/outpost
+public_key = 
