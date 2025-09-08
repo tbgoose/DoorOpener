@@ -66,6 +66,35 @@
             flex-wrap: wrap;
             align-items: center;
         }
+        /* Card list for small screens */
+        .log-cards { display: none; }
+        .log-card {
+            background: rgba(255,255,255,0.25);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            padding: 12px;
+        }
+        .log-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .badge-status { 
+            display: inline-block; 
+            padding: 2px 8px; 
+            border-radius: 999px; 
+            font-size: 0.85em; 
+            font-weight: 700; 
+            letter-spacing: 0.3px;
+        }
+        .badge-status.status-success { background: rgba(76, 175, 80, 0.15); color: #2e7d32; border: 1px solid rgba(76, 175, 80, 0.35); }
+        .badge-status.status-failure { background: rgba(244, 67, 54, 0.15); color: #c62828; border: 1px solid rgba(244, 67, 54, 0.35); }
+        .log-card .card-body { display: grid; gap: 6px; }
+        .card-row { display: grid; grid-template-columns: 32% 1fr; gap: 8px; }
+        .card-row .label { font-weight: 600; color: rgba(0,0,0,0.7); }
+        .card-row .value { color: rgba(0,0,0,0.85); word-break: break-word; }
         /* Responsive table wrapper */
         .table-responsive {
             width: 100%;
@@ -162,6 +191,9 @@
                 justify-content: space-between;
             }
             .log-table { font-size: 0.95rem; }
+            /* Hide table on phones, use card list */
+            .table-responsive { display: none; }
+            .log-cards { display: grid; gap: 12px; }
             .log-table th,
             .log-table td {
                 padding: 8px;
@@ -201,6 +233,9 @@
             #dashboard.compact .log-table td { padding-left: 38%; min-height: 36px; }
             #dashboard.compact .log-table td::before { left: 10px; width: 34%; font-size: 0.9em; }
         }
+        /* Compact mode for cards */
+        #dashboard.compact .log-card { padding: 8px; }
+        #dashboard.compact .card-row { grid-template-columns: 36% 1fr; gap: 6px; }
     </style>
 </head>
 <body>
@@ -286,6 +321,7 @@
                 </tbody>
             </table>
             </div>
+            <div id="logCards" class="log-cards"></div>
         </div>
     </div>
 
@@ -467,13 +503,15 @@
 
         function renderLogs() {
             const tbody = document.getElementById('logTableBody');
+            const cardList = document.getElementById('logCards');
             
             if (filteredLogs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="no-logs">No logs found</td></tr>';
+                if (cardList) cardList.innerHTML = '<div class="log-card"><div class="card-body"><div class="card-row"><span class="label">Info</span><span class="value">No logs found</span></div></div></div>';
                 return;
             }
 
-            tbody.innerHTML = filteredLogs.map(log => {
+            const rowsHtml = filteredLogs.map(log => {
                 const statusClass = log.status === 'SUCCESS' ? 'status-success' : 'status-failure';
                 
                 // Parse ISO timestamp properly
@@ -497,6 +535,34 @@
                     </tr>
                 `;
             }).join('');
+            tbody.innerHTML = rowsHtml;
+
+            if (cardList) {
+                const cardsHtml = filteredLogs.map(log => {
+                    const statusClass = log.status === 'SUCCESS' ? 'status-success' : 'status-failure';
+                    let timestamp = log.timestamp;
+                    try {
+                        const date = new Date(log.timestamp);
+                        if (!isNaN(date.getTime())) {
+                            timestamp = date.toLocaleString();
+                        }
+                    } catch (e) {}
+                    return `
+                        <div class="log-card">
+                            <div class="card-header">
+                                <span class="card-timestamp">${timestamp}</span>
+                                <span class="badge-status ${statusClass}">${log.status}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="card-row"><span class="label">IP Address</span><span class="value">${log.ip}</span></div>
+                                <div class="card-row"><span class="label">User</span><span class="value">${log.user || 'UNKNOWN'}</span></div>
+                                <div class="card-row"><span class="label">Details</span><span class="value">${log.details || '-'}</span></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                cardList.innerHTML = cardsHtml;
+            }
         }
 
         function toggleCompact(ev) {
