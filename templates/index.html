@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,37 +22,46 @@
             overflow-x: hidden;
             box-sizing: border-box;
         }
+
         body::before {
             content: '';
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             z-index: 0;
             background: url('/static/background.jpg') no-repeat center center fixed;
             background-size: cover;
             opacity: 0.92;
             pointer-events: none;
         }
-        .container, #toast-container, .battery-container {
+
+        .container,
+        #toast-container,
+        .battery-container {
             position: relative;
             z-index: 1;
 
         }
+
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.2));
-            box-shadow: 
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+            box-shadow:
                 0 8px 32px 0 rgba(31, 38, 135, 0.2),
                 0 2px 16px 0 rgba(255, 255, 255, 0.3),
                 inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
             border-radius: 20px;
             backdrop-filter: blur(15px) saturate(1.3);
             -webkit-backdrop-filter: blur(15px) saturate(1.3);
-            border: 1px solid rgba(255,255,255,0.4);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             position: relative;
             overflow: hidden;
         }
+
         .container::before {
             content: '';
             position: absolute;
@@ -59,9 +69,10 @@
             left: 0;
             right: 0;
             height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
             border-radius: 24px 24px 0 0;
         }
+
         .input-row {
             display: flex;
             flex-direction: row;
@@ -69,25 +80,30 @@
             justify-content: center;
             width: 100%;
         }
+
         .door-input {
             flex: 1 1 auto;
         }
+
         @media (max-width: 480px) {
             body {
                 padding: 10px;
                 align-items: flex-start;
                 padding-top: 60px;
             }
+
             .container {
                 padding: 2rem 1.5rem;
                 width: 95%;
                 max-width: none;
                 margin-top: 20px;
             }
+
             h1 {
                 font-size: 1.8rem;
                 margin-bottom: 1.5rem;
             }
+
             .door-input {
                 font-size: 18px !important;
                 padding: 16px 20px !important;
@@ -95,21 +111,25 @@
                 max-width: none !important;
                 margin-bottom: 2rem !important;
             }
+
             .door-button {
                 font-size: 20px;
                 min-width: 200px;
                 height: 56px;
                 padding: 0 40px;
             }
+
             #battery-container {
                 bottom: 20px !important;
                 right: 80px !important;
                 padding: 8px 12px !important;
             }
+
             #battery-container span {
                 font-size: 0.75rem !important;
             }
         }
+
         .container {
             text-align: center;
             padding: 2.5rem;
@@ -117,13 +137,15 @@
             width: 420px;
             margin: auto;
         }
+
         h1 {
-            color: rgba(0,0,0,0.8);
+            color: rgba(0, 0, 0, 0.8);
             margin-bottom: 2rem;
             font-weight: 600;
             letter-spacing: -0.5px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
+
         .door-button {
             min-width: 180px;
             max-width: 240px;
@@ -147,54 +169,84 @@
             cursor: pointer;
             box-shadow: 0 4px 15px 0 rgba(76, 175, 80, 0.3);
         }
+
         .door-button:hover {
             background: linear-gradient(135deg, #45a049, #3e8e41);
             transform: translateY(-2px);
             box-shadow: 0 6px 20px 0 rgba(76, 175, 80, 0.4);
         }
+
         .door-button:active {
             background: linear-gradient(135deg, #3e8e41, #2e7d32);
             transform: translateY(0);
             box-shadow: 0 4px 15px 0 rgba(76, 175, 80, 0.3);
         }
+
         .status {
             margin-top: 20px;
             padding: 10px;
             border-radius: 5px;
             display: none;
         }
+
         .success {
             background-color: #dff0d8;
             color: #3c763d;
         }
+
         .error {
             background-color: #f2dede;
             color: #a94442;
         }
+
         @media (max-width: 480px) {
             .door-button {
                 padding: 15px 30px;
                 font-size: 20px;
             }
         }
+
         .door-button.error-btn {
             background-color: #c0392b !important;
             color: #fff !important;
             border: none;
-            animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+            animation: shake 0.35s cubic-bezier(.36, .07, .19, .97) both;
         }
+
         .door-button.success-btn {
             background-color: #27ae60 !important;
             color: #fff !important;
             border: none;
         }
+
         @keyframes shake {
-            10%, 90% { transform: translateX(-2px); }
-            20%, 80% { transform: translateX(4px); }
-            30%, 50%, 70% { transform: translateX(-8px); }
-            40%, 60% { transform: translateX(8px); }
-            100% { transform: translateX(0); }
+
+            10%,
+            90% {
+                transform: translateX(-2px);
+            }
+
+            20%,
+            80% {
+                transform: translateX(4px);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translateX(-8px);
+            }
+
+            40%,
+            60% {
+                transform: translateX(8px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
         }
+
         #toast-container {
             position: fixed;
             z-index: 9999;
@@ -207,9 +259,11 @@
             max-width: 90vw;
             pointer-events: none;
         }
+
         body #toast-container {
             position: fixed !important;
         }
+
         .toast {
             min-width: 180px;
             max-width: 320px;
@@ -218,7 +272,7 @@
             color: #fff;
             padding: 1rem 1.5rem;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
             opacity: 0;
             transform: translateY(40px);
             transition: opacity 0.4s, transform 0.4s;
@@ -226,16 +280,20 @@
             pointer-events: auto;
             word-break: break-word;
         }
+
         .toast.success {
             background: #27ae60;
         }
+
         .toast.error {
             background: #c0392b;
         }
+
         .toast.show {
             opacity: 1;
             transform: translateY(0);
         }
+
         @media (max-width: 600px) {
             #toast-container {
                 right: 2vw;
@@ -243,6 +301,7 @@
                 max-width: 96vw;
                 align-items: stretch;
             }
+
             .toast {
                 min-width: 120px;
                 max-width: 96vw;
@@ -250,54 +309,61 @@
                 padding: 0.8rem 1rem;
             }
         }
+
         /* Keypad button visual feedback */
         .keypad-btn {
             padding: 16px;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 12px;
             font-size: 20px;
             font-weight: 600;
-            color: rgba(0,0,0,0.8);
+            color: rgba(0, 0, 0, 0.8);
             cursor: pointer;
-            transition: 
+            transition:
                 background 0.18s,
                 color 0.18s,
                 box-shadow 0.18s,
                 transform 0.12s;
             backdrop-filter: blur(10px);
-            box-shadow: 0 2px 8px 0 rgba(31,38,135,0.08);
+            box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.08);
             outline: none;
             user-select: none;
         }
+
         .keypad-btn:hover,
         .keypad-btn:focus {
-            background: rgba(255,255,255,0.38);
+            background: rgba(255, 255, 255, 0.38);
             color: #1976d2;
-            box-shadow: 0 4px 16px 0 rgba(76,175,255,0.20);
+            box-shadow: 0 4px 16px 0 rgba(76, 175, 255, 0.20);
             transform: scale(1.08);
             z-index: 2;
         }
+
         .keypad-btn:active {
-            background: rgba(76,175,80,0.18);
+            background: rgba(76, 175, 80, 0.18);
             color: #388e3c;
-            box-shadow: 0 2px 8px 0 rgba(31,38,135,0.12);
+            box-shadow: 0 2px 8px 0 rgba(31, 38, 135, 0.12);
             transform: scale(0.97);
         }
+
         .keypad-btn.clear-btn {
-            color: rgba(220,20,60,0.8);
+            color: rgba(220, 20, 60, 0.8);
             font-size: 16px;
         }
+
         .keypad-btn.submit-btn {
             background: linear-gradient(135deg, #4CAF50, #45a049);
             color: white;
             font-size: 16px;
         }
+
         .keypad-btn.submit-btn:hover,
         .keypad-btn.submit-btn:focus {
             background: linear-gradient(135deg, #45a049, #388e3c);
             color: #fff;
         }
+
         .keypad-btn.submit-btn:active {
             background: linear-gradient(135deg, #388e3c, #2e7d32);
             color: #fff;
@@ -313,24 +379,26 @@
             justify-content: center;
             width: 48px;
             height: 48px;
-            background: rgba(255,255,255,0.25);
+            background: rgba(255, 255, 255, 0.25);
             border-radius: 50%;
             backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: rgba(0, 0, 0, 0.7);
             text-decoration: none;
             transition: all 0.2s ease;
             z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             overflow: visible;
         }
+
         .gear-icon {
             width: 22px;
             height: 22px;
             object-fit: contain;
             display: block;
-            transition: transform 0.5s cubic-bezier(.36,.07,.19,.97);
+            transition: transform 0.5s cubic-bezier(.36, .07, .19, .97);
         }
+
         .gear-label {
             display: inline-block;
             opacity: 0;
@@ -338,10 +406,10 @@
             font-size: 1.08rem;
             font-weight: 600;
             color: #333;
-            background: rgba(255,255,255,0.96);
+            background: rgba(255, 255, 255, 0.96);
             border-radius: 8px;
             padding: 6px 16px;
-            box-shadow: 0 2px 8px rgba(31,38,135,0.09);
+            box-shadow: 0 2px 8px rgba(31, 38, 135, 0.09);
             pointer-events: none;
             transform: translateX(10px);
             transition: opacity 0.28s, transform 0.28s;
@@ -350,72 +418,102 @@
             bottom: 8px;
             white-space: nowrap;
         }
+
         .gear-spin-wrap:hover .gear-icon,
         .gear-spin-wrap:focus .gear-icon {
-            animation: gear-spin 1.1s cubic-bezier(.36,.07,.19,.97) infinite linear;
+            animation: gear-spin 1.1s cubic-bezier(.36, .07, .19, .97) infinite linear;
             transform: scale(1.2);
         }
+
         .gear-spin-wrap:hover .gear-label,
         .gear-spin-wrap:focus .gear-label {
             opacity: 1;
             transform: translateX(0);
         }
+
         @keyframes gear-spin {
-            0% { transform: rotate(0deg) scale(1.2); }
-            100% { transform: rotate(360deg) scale(1.2); }
+            0% {
+                transform: rotate(0deg) scale(1.2);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1.2);
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Matrix-style ACCESS DENIED popup -->
-        <div id="accessDeniedPopup" style="display:none; position:absolute; top:-60px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(0,0,0,0.95); color:#ff0000; font-family:'Courier New',monospace; font-size:2rem; padding:18px 36px; border-radius:14px; box-shadow:0 8px 32px 0 rgba(255, 0, 0, 0.18),0 2px 16px 0 rgba(0,0,0,0.3); border:2px solid #ff0000; letter-spacing:2px; text-shadow:0 0 8px #ff0000,0 0 2px #ff0000; pointer-events:none; opacity:0; transition:opacity 0.35s, top 0.35s;">
+        <div id="accessDeniedPopup"
+            style="display:none; position:absolute; top:-60px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(0,0,0,0.95); color:#ff0000; font-family:'Courier New',monospace; font-size:2rem; padding:18px 36px; border-radius:14px; box-shadow:0 8px 32px 0 rgba(255, 0, 0, 0.18),0 2px 16px 0 rgba(0,0,0,0.3); border:2px solid #ff0000; letter-spacing:2px; text-shadow:0 0 8px #ff0000,0 0 2px #ff0000; pointer-events:none; opacity:0; transition:opacity 0.35s, top 0.35s;">
             ACCESS DENIED
         </div>
-            <!-- PIN Display -->
-            <div id="pinDisplay" style="width: 280px; margin: 0 auto 1.5rem auto; padding: 14px 18px; font-size: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); color: rgba(0,0,0,0.8); font-weight: 600; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-height: 28px; letter-spacing: 8px; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center;">
-                Enter PIN
-            </div>
-            
-            <!-- Keypad -->
-            <div class="keypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; width: 280px; margin-left: auto; margin-right: auto;">
-                <button class="keypad-btn" onclick="addDigit('1')">1</button>
-                <button class="keypad-btn" onclick="addDigit('2')">2</button>
-                <button class="keypad-btn" onclick="addDigit('3')">3</button>
-                <button class="keypad-btn" onclick="addDigit('4')">4</button>
-                <button class="keypad-btn" onclick="addDigit('5')">5</button>
-                <button class="keypad-btn" onclick="addDigit('6')">6</button>
-                <button class="keypad-btn" onclick="addDigit('7')">7</button>
-                <button class="keypad-btn" onclick="addDigit('8')">8</button>
-                <button class="keypad-btn" onclick="addDigit('9')">9</button>
-                <button class="keypad-btn clear-btn" onclick="clearPin()">⌫</button>
-                <button class="keypad-btn" onclick="addDigit('0')">0</button>
-                <button id="submitBtn" class="keypad-btn submit-btn" onclick="openDoor()">✓</button>
-            </div>
-            
-            {% if oidc_enabled %}
-            <div style="width: 280px; margin: 0 auto 0.5rem auto; text-align:center;">
-                <a href="/login" id="ssoLoginBtn" style="display:inline-block; padding:10px 16px; border-radius:8px; background: linear-gradient(135deg, #1976d2, #1565c0); color:#fff; text-decoration:none; font-weight:600;">Login with SSO</a>
-                <button id="ssoOpenBtn" onclick="openDoorWithSSO()" style="display:none; margin-left:8px; padding:10px 16px; border-radius:8px; background: linear-gradient(135deg, #4CAF50, #45a049); color:#fff; border:none; font-weight:600;">Open with SSO</button>
-            </div>
-            {% endif %}
-            
-        
+        <!-- PIN Display -->
+        <div id="pinDisplay"
+            style="width: 280px; margin: 0 auto 1.5rem auto; padding: 14px 18px; font-size: 24px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); color: rgba(0,0,0,0.8); font-weight: 600; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); text-align: center; min-height: 28px; letter-spacing: 8px; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center;">
+            Enter PIN
+        </div>
+
+        <!-- Keypad -->
+        <div class="keypad"
+            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; width: 280px; margin-left: auto; margin-right: auto;">
+            <button class="keypad-btn" onclick="addDigit('1')">1</button>
+            <button class="keypad-btn" onclick="addDigit('2')">2</button>
+            <button class="keypad-btn" onclick="addDigit('3')">3</button>
+            <button class="keypad-btn" onclick="addDigit('4')">4</button>
+            <button class="keypad-btn" onclick="addDigit('5')">5</button>
+            <button class="keypad-btn" onclick="addDigit('6')">6</button>
+            <button class="keypad-btn" onclick="addDigit('7')">7</button>
+            <button class="keypad-btn" onclick="addDigit('8')">8</button>
+            <button class="keypad-btn" onclick="addDigit('9')">9</button>
+            <button class="keypad-btn clear-btn" onclick="clearPin()">⌫</button>
+            <button class="keypad-btn" onclick="addDigit('0')">0</button>
+            <button id="submitBtn" class="keypad-btn submit-btn" onclick="openDoor()">✓</button>
+        </div>
+
+        {% if oidc_enabled %}
+        <div style="width: 280px; margin: 0 auto 0.5rem auto; text-align:center;">
+            <a href="/login" id="ssoLoginBtn"
+                style="display:inline-block; padding:10px 16px; border-radius:8px; background: linear-gradient(135deg, #1976d2, #1565c0); color:#fff; text-decoration:none; font-weight:600;">Login
+                with SSO</a>
+            <button id="ssoOpenBtn" onclick="openDoorWithSSO()"
+                style="display:none; margin-left:8px; padding:10px 16px; border-radius:8px; background: linear-gradient(135deg, #4CAF50, #45a049); color:#fff; border:none; font-weight:600;">Open
+                with SSO</button>
+        </div>
+        {% endif %}
+
+        <!-- Logout button for OIDC -->
+        <button onclick="window.location.href='/oidc/logout'" id="ssoLogoutBtn"
+            style="display:none; margin-left:8px; padding: 10px 16px; border-radius: 8px; background: linear-gradient(135deg, #e53935, #d32f2f); color: #fff; font-weight: 600; text-align: center; margin-top: 1rem; border: none; cursor: pointer;">
+            Logout
+        </button>
+
     </div>
     <div id="toast-container"></div>
-    
+
     <!-- Battery icon positioned next to admin icon -->
-    <div id="battery-container" style="position: fixed; bottom: 20px; right: 80px; display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.25); border-radius: 50px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-        <div id="battery-icon" style="width: 20px; height: 10px; border: 1px solid rgba(0,0,0,0.5); border-radius: 1px; position: relative; background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);">
-            <div style="position: absolute; right: -3px; top: 1px; width: 1.5px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 0 1px 1px 0;"></div>
+    <div id="battery-container"
+        style="position: fixed; bottom: 20px; right: 80px; display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.25); border-radius: 50px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <div id="battery-icon"
+            style="width: 20px; height: 10px; border: 1px solid rgba(0,0,0,0.5); border-radius: 1px; position: relative; background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);">
+            <div
+                style="position: absolute; right: -3px; top: 1px; width: 1.5px; height: 6px; background: rgba(0,0,0,0.5); border-radius: 0 1px 1px 0;">
+            </div>
         </div>
         <span id="battery-level" style="font-size: 0.8rem; font-weight: 600; color: rgba(0,0,0,0.7);">--</span>
     </div>
 
     <!-- GitHub button -->
-    <a href="https://github.com/Sloth-on-meth/DoorOpener" target="_blank" style="position: fixed; bottom: 20px; left: 20px; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(255,255,255,0.25); border-radius: 50%; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); color: rgba(0,0,0,0.7); text-decoration: none; transition: all 0.2s ease; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" title="View on GitHub" onmouseover="this.style.background='rgba(255,255,255,0.35)'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'; this.style.transform='scale(1)'">
+    <a href="https://github.com/Sloth-on-meth/DoorOpener" target="_blank"
+        style="position: fixed; bottom: 20px; left: 20px; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: rgba(255,255,255,0.25); border-radius: 50%; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.3); color: rgba(0,0,0,0.7); text-decoration: none; transition: all 0.2s ease; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+        title="View on GitHub"
+        onmouseover="this.style.background='rgba(255,255,255,0.35)'; this.style.transform='scale(1.05)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.25)'; this.style.transform='scale(1)'">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            <path
+                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
         </svg>
     </a>
 
@@ -427,17 +525,17 @@
     <script>
         let batteryLevel = null;
         let currentPin = '';
-        
+
         function addDigit(digit) {
             if (currentPin.length < 8) {
                 currentPin += digit;
                 updatePinDisplay();
-                
+
                 // Haptic feedback
                 if (window.navigator.vibrate) {
                     window.navigator.vibrate(30);
                 }
-                
+
                 // Auto-submit when PIN reaches valid length (4-8 digits)
                 if (currentPin.length >= 4) {
                     // Small delay to show the digit being entered
@@ -447,19 +545,19 @@
                 }
             }
         }
-        
+
         function clearPin() {
             if (currentPin.length > 0) {
                 currentPin = currentPin.slice(0, -1);
                 updatePinDisplay();
-                
+
                 // Haptic feedback
                 if (window.navigator.vibrate) {
                     window.navigator.vibrate(30);
                 }
             }
         }
-        
+
         function updatePinDisplay() {
             const display = document.getElementById('pinDisplay');
             if (currentPin.length === 0) {
@@ -468,12 +566,12 @@
                 display.textContent = '●'.repeat(currentPin.length);
             }
         }
-        
+
         let authStatus = { oidc_enabled: false, oidc_authenticated: false, require_pin_for_oidc: true };
 
         function openDoor() {
             const pin = currentPin;
-            
+
             // If OIDC is authenticated and PIN is not required, allow pinless open
             if (!pin) {
                 if (authStatus.oidc_enabled && authStatus.oidc_authenticated && !authStatus.require_pin_for_oidc) {
@@ -483,7 +581,7 @@
                     return;
                 }
             }
-            
+
             // Send request to open door
             fetch('/open-door', {
                 method: 'POST',
@@ -494,51 +592,51 @@
                 cache: 'no-store',
                 body: JSON.stringify({ pin: pin })
             })
-            .then(response => response.json().then(data => ({ status: response.status, data })))
-            .then(({ status, data }) => {
-                if (status === 200 && data.status === 'success') {
-                    showStatus('Success: ' + data.message, 'success');
-                    
-                    // Play success sound and fancy vibration
-                    playSuccessSound();
-                    if (window.navigator.vibrate) {
-                        // Fancy "ta-da" vibration pattern: short-long-short with crescendo
-                        window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
+                .then(response => response.json().then(data => ({ status: response.status, data })))
+                .then(({ status, data }) => {
+                    if (status === 200 && data.status === 'success') {
+                        showStatus('Success: ' + data.message, 'success');
+
+                        // Play success sound and fancy vibration
+                        playSuccessSound();
+                        if (window.navigator.vibrate) {
+                            // Fancy "ta-da" vibration pattern: short-long-short with crescendo
+                            window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
+                        }
+                    } else {
+                        // Error (invalid PIN, blocked, etc)
+                        showStatus('Error: ' + data.message + 'error');
+
+                        // Change button to red cross on failure
+                        const submitBtn = document.getElementById('submitBtn');
+                        submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                        submitBtn.textContent = '✗';
+
+                        // Play failure sound and enhanced vibration
+                        playFailureSound();
+                        showAccessDeniedPopup();
+                        if (window.navigator.vibrate) {
+                            // Enhanced failure vibration pattern: strong buzz with pauses
+                            window.navigator.vibrate([200, 100, 200, 100, 300]);
+                        }
                     }
-                } else {
-                    // Error (invalid PIN, blocked, etc)
-                    showStatus('Error: ' + data.message + 'error');
-                    
-                    // Change button to red cross on failure
-                    const submitBtn = document.getElementById('submitBtn');
-                    submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
-                    submitBtn.textContent = '✗';
-                    
-                    // Play failure sound and enhanced vibration
-                    playFailureSound();
-                    showAccessDeniedPopup();
-                    if (window.navigator.vibrate) {
-                        // Enhanced failure vibration pattern: strong buzz with pauses
-                        window.navigator.vibrate([200, 100, 200, 100, 300]);
-                    }
-                }
-            })
-            .catch(error => {
-                showStatus('Error: Could not connect to server', 'error');
-            })
-            .finally(() => {
-                // Reset button and clear PIN after attempt
-                setTimeout(() => {
-                    const submitBtn = document.getElementById('submitBtn');
-                    submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
-                    submitBtn.textContent = '✓';
-                    
-                    currentPin = '';
-                    updatePinDisplay();
-                }, 1200);
-            });
+                })
+                .catch(error => {
+                    showStatus('Error: Could not connect to server', 'error');
+                })
+                .finally(() => {
+                    // Reset button and clear PIN after attempt
+                    setTimeout(() => {
+                        const submitBtn = document.getElementById('submitBtn');
+                        submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                        submitBtn.textContent = '✓';
+
+                        currentPin = '';
+                        updatePinDisplay();
+                    }, 1200);
+                });
         }
-        
+
         function openDoorWithSSO() {
             // No PIN payload; rely on server-side OIDC session
             fetch('/open-door', {
@@ -548,32 +646,32 @@
                 cache: 'no-store',
                 body: JSON.stringify({})
             })
-            .then(response => response.json().then(data => ({ status: response.status, data })))
-            .then(({ status, data }) => {
-                if (status === 200 && data.status === 'success') {
-                    showStatus('Success: ' + data.message, 'success');
-                    playSuccessSound();
-                    if (window.navigator.vibrate) window.navigator.vibrate([50,30,150,50,80,30,200]);
-                } else {
-                    showStatus('Error: ' + (data && data.message ? data.message : 'Unknown error'), 'error');
-                    const submitBtn = document.getElementById('submitBtn');
-                    submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
-                    submitBtn.textContent = '✗';
-                    playFailureSound();
-                    showAccessDeniedPopup();
-                    if (window.navigator.vibrate) window.navigator.vibrate([200,100,200,100,300]);
-                }
-            })
-            .catch(() => showStatus('Error: Could not connect to server', 'error'))
-            .finally(() => {
-                setTimeout(() => {
-                    const submitBtn = document.getElementById('submitBtn');
-                    submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
-                    submitBtn.textContent = '✓';
-                }, 1200);
-            });
+                .then(response => response.json().then(data => ({ status: response.status, data })))
+                .then(({ status, data }) => {
+                    if (status === 200 && data.status === 'success') {
+                        showStatus('Success: ' + data.message, 'success');
+                        playSuccessSound();
+                        if (window.navigator.vibrate) window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
+                    } else {
+                        showStatus('Error: ' + (data && data.message ? data.message : 'Unknown error'), 'error');
+                        const submitBtn = document.getElementById('submitBtn');
+                        submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                        submitBtn.textContent = '✗';
+                        playFailureSound();
+                        showAccessDeniedPopup();
+                        if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200, 100, 300]);
+                    }
+                })
+                .catch(() => showStatus('Error: Could not connect to server', 'error'))
+                .finally(() => {
+                    setTimeout(() => {
+                        const submitBtn = document.getElementById('submitBtn');
+                        submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
+                        submitBtn.textContent = '✓';
+                    }, 1200);
+                });
         }
-        
+
         function showStatus(message, type, persistent) {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -597,7 +695,7 @@
             if (batteryLevel) {
                 batteryLevel.textContent = (level !== null && level !== undefined) ? `${level}%` : '--';
             }
-            
+
             // Update battery fill based on level
             if (level >= 80) {
                 batteryIcon.style.background = 'linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%)';
@@ -608,7 +706,7 @@
             } else {
                 batteryIcon.style.background = 'linear-gradient(90deg, #F44336 0%, #E91E63 100%)';
             }
-            
+
             // Animate the fill width based on battery level
             const fillWidth = level ? `${level}%` : '0%';
             batteryIcon.style.backgroundSize = `${fillWidth} 100%`;
@@ -630,35 +728,35 @@
             try {
                 // Create AudioContext for Web Audio API
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
+
                 // Success sound: ascending chime with harmonics
                 const playTone = (frequency, startTime, duration, volume = 0.3) => {
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
-                    
+
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-                    
+
                     oscillator.frequency.setValueAtTime(frequency, startTime);
                     oscillator.type = 'sine';
-                    
+
                     // Smooth volume envelope
                     gainNode.gain.setValueAtTime(0, startTime);
                     gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-                    
+
                     oscillator.start(startTime);
                     oscillator.stop(startTime + duration);
                 };
-                
+
                 const now = audioContext.currentTime;
-                
+
                 // "Ta-da" chord progression: C-E-G-C (262-330-392-523 Hz)
                 playTone(262, now, 0.15, 0.2);        // C4 - short
                 playTone(330, now + 0.08, 0.25, 0.25); // E4 - medium  
                 playTone(392, now + 0.2, 0.3, 0.3);    // G4 - longer
                 playTone(523, now + 0.35, 0.4, 0.35);  // C5 - longest, highest
-                
+
                 // Add subtle harmonics for richness
                 playTone(523 * 2, now + 0.35, 0.2, 0.1); // Octave harmonic
             } catch (e) {
@@ -667,71 +765,72 @@
         }
 
         function playFailureSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        // Futuristic digital fail: rapid frequency modulation, metallic beeps, glitch
-        const now = audioContext.currentTime;
-        const glitch = (freqs, start, dur, vol) => {
-            freqs.forEach((f, i) => {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                // Futuristic digital fail: rapid frequency modulation, metallic beeps, glitch
+                const now = audioContext.currentTime;
+                const glitch = (freqs, start, dur, vol) => {
+                    freqs.forEach((f, i) => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.type = i % 2 === 0 ? 'triangle' : 'square';
+                        osc.frequency.setValueAtTime(f, start + i * 0.02);
+                        // Quick vibrato
+                        if (osc.type === 'triangle') {
+                            osc.frequency.linearRampToValueAtTime(f * 1.07, start + i * 0.02 + dur / 3);
+                            osc.frequency.linearRampToValueAtTime(f, start + i * 0.02 + dur);
+                        }
+                        gain.gain.setValueAtTime(0, start + i * 0.02);
+                        gain.gain.linearRampToValueAtTime(vol, start + i * 0.02 + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.01, start + i * 0.02 + dur);
+                        osc.start(start + i * 0.02);
+                        osc.stop(start + i * 0.02 + dur);
+                    });
+                };
+                // Glitchy metallic sequence
+                glitch([420, 1800, 666, 1337, 333, 888], now, 0.09, 0.19);
+                glitch([210, 900, 333, 777], now + 0.13, 0.13, 0.13);
+                glitch([120, 480], now + 0.28, 0.17, 0.09);
+                // Short digital zap
                 const osc = audioContext.createOscillator();
                 const gain = audioContext.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(80, now + 0.38);
+                gain.gain.setValueAtTime(0.13, now + 0.38);
                 osc.connect(gain);
                 gain.connect(audioContext.destination);
-                osc.type = i % 2 === 0 ? 'triangle' : 'square';
-                osc.frequency.setValueAtTime(f, start + i * 0.02);
-                // Quick vibrato
-                if (osc.type === 'triangle') {
-                    osc.frequency.linearRampToValueAtTime(f * 1.07, start + i * 0.02 + dur/3);
-                    osc.frequency.linearRampToValueAtTime(f, start + i * 0.02 + dur);
-                }
-                gain.gain.setValueAtTime(0, start + i * 0.02);
-                gain.gain.linearRampToValueAtTime(vol, start + i * 0.02 + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.01, start + i * 0.02 + dur);
-                osc.start(start + i * 0.02);
-                osc.stop(start + i * 0.02 + dur);
-            });
-        };
-        // Glitchy metallic sequence
-        glitch([420, 1800, 666, 1337, 333, 888], now, 0.09, 0.19);
-        glitch([210, 900, 333, 777], now + 0.13, 0.13, 0.13);
-        glitch([120, 480], now + 0.28, 0.17, 0.09);
-        // Short digital zap
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(80, now + 0.38);
-        gain.gain.setValueAtTime(0.13, now + 0.38);
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.frequency.linearRampToValueAtTime(10, now + 0.45);
-        gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
-        osc.start(now + 0.38);
-        osc.stop(now + 0.45);
-    } catch (e) {}
-}
+                osc.frequency.linearRampToValueAtTime(10, now + 0.45);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+                osc.start(now + 0.38);
+                osc.stop(now + 0.45);
+            } catch (e) { }
+        }
 
-// Show Matrix-style ACCESS DENIED popup
-function showAccessDeniedPopup() {
-    const popup = document.getElementById('accessDeniedPopup');
-    if (popup) {
-        popup.style.display = 'block';
-        setTimeout(() => {
-            popup.style.opacity = '1';
-            popup.style.top = '10px';
-        }, 10);
-        setTimeout(() => {
-            popup.style.opacity = '0';
-            popup.style.top = '-60px';
-            setTimeout(() => { popup.style.display = 'none'; }, 400);
-        }, 1700);
-    }
-}
+        // Show Matrix-style ACCESS DENIED popup
+        function showAccessDeniedPopup() {
+            const popup = document.getElementById('accessDeniedPopup');
+            if (popup) {
+                popup.style.display = 'block';
+                setTimeout(() => {
+                    popup.style.opacity = '1';
+                    popup.style.top = '10px';
+                }, 10);
+                setTimeout(() => {
+                    popup.style.opacity = '0';
+                    popup.style.top = '-60px';
+                    setTimeout(() => { popup.style.display = 'none'; }, 400);
+                }, 1700);
+            }
+        }
 
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Initial battery level fetch
             fetchBatteryLevel();
+
             // Query authentication status for OIDC UX
             fetch('/auth/status', { credentials: 'same-origin', cache: 'no-store' })
                 .then(r => r.json())
@@ -739,24 +838,28 @@ function showAccessDeniedPopup() {
                     authStatus = s || authStatus;
                     const loginBtn = document.getElementById('ssoLoginBtn');
                     const openBtn = document.getElementById('ssoOpenBtn');
-                    if (loginBtn && openBtn) {
+                    const logoutBtn = document.getElementById('ssoLogoutBtn'); // Logout button
+
+                    if (loginBtn && openBtn && logoutBtn) {
                         if (authStatus.oidc_enabled && authStatus.oidc_authenticated) {
                             loginBtn.style.display = 'none';
+                            logoutBtn.style.display = 'block'; // Show Logout button
                             // Show Open with SSO only when PIN not required
                             openBtn.style.display = authStatus.require_pin_for_oidc ? 'none' : 'inline-block';
                         } else {
                             loginBtn.style.display = authStatus.oidc_enabled ? 'inline-block' : 'none';
                             openBtn.style.display = 'none';
+                            logoutBtn.style.display = 'none'; // Hide Logout button
                         }
                     }
                 })
-                .catch(() => {});
-            
+                .catch(() => { });
+
             // Initialize PIN display
             updatePinDisplay();
-            
+
             // Add keyboard support
-            document.addEventListener('keydown', function(event) {
+            document.addEventListener('keydown', function (event) {
                 if (event.key >= '0' && event.key <= '9') {
                     addDigit(event.key);
                     event.preventDefault();
@@ -771,4 +874,5 @@ function showAccessDeniedPopup() {
         });
     </script>
 </body>
+
 </html>

@@ -871,5 +871,36 @@ def admin_logs():
         logger.error(f"Exception in admin_logs: {e}")
         return jsonify({"error": "Failed to load logs"}), 500
 
+@app.route('/oidc/logout')
+def oidc_logout():
+    """Logout from OIDC and clear session"""
+    if oauth:
+        try:
+            # Clear the local session
+            session.clear()
+
+            # Fetch the .well-known configuration
+            well_known_url = f"{oidc_issuer}/.well-known/openid-configuration"
+            response = requests.get(well_known_url, timeout=10)
+            if response.status_code == 200:
+                config = response.json()
+                logout_url = config.get('end_session_endpoint')
+                if logout_url:
+                    # Redirect to the OIDC provider's logout endpoint
+                    return redirect(f"{logout_url}?redirect_uri={url_for('index', _external=True)}")
+                else:
+                    logger.error("Logout URL not found in .well-known configuration")
+                    return jsonify({"status": "error", "message": "Logout URL not found"}), 500
+            else:
+                logger.error(f"Failed to fetch .well-known configuration: {response.status_code}")
+                return jsonify({"status": "error", "message": "Failed to fetch OIDC configuration"}), 500
+        except Exception as e:
+            logger.error(f"Error during OIDC logout: {e}")
+            return jsonify({"status": "error", "message": "Failed to logout"}), 500
+    else:
+        # If OIDC is not enabled, just clear the session
+        session.clear()
+        return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=server_port, debug=os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
