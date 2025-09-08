@@ -168,6 +168,9 @@ def test_battery_exception_returns_none(client, monkeypatch):
 
 
 def test_auth_status_oidc_disabled_ignores_stale_session(client):
+    # Explicitly disable OIDC to ensure gating is respected even with stale session keys
+    import app as app_module
+    app_module.oauth = None
     with client.session_transaction() as s:
         s['oidc_authenticated'] = True
         s['oidc_user'] = 'alice@example.com'
@@ -246,7 +249,6 @@ def test_admin_logs_parsing(client, app_module, tmp_path):
     # Create a log line and ensure admin logs endpoint parses it
     logs_dir = tmp_path / 'logs'
     logs_dir.mkdir(parents=True, exist_ok=True)
-    # Point app to temp logs dir (both access and audit handlers are already opened, so we write where it reads)
     log_file = logs_dir / 'log.txt'
     entry = {
         'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -257,10 +259,9 @@ def test_admin_logs_parsing(client, app_module, tmp_path):
     }
     log_file.write_text(json.dumps(entry) + "\n", encoding='utf-8')
 
-    # Monkeypatch the path the endpoint reads
-    with patch('os.path.exists', return_value=True), \
-         patch('builtins.open') as mopen:
-        mopen.return_value.__enter__.return_value = open(log_file, 'r', encoding='utf-8')
+    # Patch the path used inside app.admin_logs to point to our temp file
+    with patch('app.os.path.exists', return_value=True), \
+         patch('app.os.path.join', return_value=str(log_file)):
         # Authenticate admin by flagging session
         with client.session_transaction() as s:
             s['admin_authenticated'] = True
