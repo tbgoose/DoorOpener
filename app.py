@@ -378,6 +378,19 @@ def open_door():
 
         # Determine if OIDC session can open without PIN
         oidc_auth = bool(session.get('oidc_authenticated'))
+        oidc_exp = session.get('oidc_exp')
+
+        # NEU: Token-Ablauf prüfen
+        if oidc_auth and (not oidc_exp or oidc_exp < time.time()):
+            # OIDC-Session ist abgelaufen, alle relevanten Session-Daten löschen
+            session.pop('oidc_authenticated', None)
+            session.pop('oidc_user', None)
+            session.pop('oidc_groups', None)
+            session.pop('oidc_exp', None)
+            oidc_auth = False # Flag für den Rest der Funktion zurücksetzen
+            logger.warning(f"OIDC session for IP {primary_ip} has expired. Re-authentication required.")
+            # Optional: Man könnte hier direkt einen Fehler zurückgeben, aber wir lassen es in die PIN-Prüfung fallen
+        
         oidc_groups = session.get('oidc_groups', [])
         oidc_user = session.get('oidc_user')
         oidc_user_allowed = (not oidc_user_group) or (oidc_user_group in oidc_groups)
@@ -742,6 +755,7 @@ def oidc_callback():
         session['oidc_authenticated'] = True
         session['oidc_user'] = user
         session['oidc_groups'] = groups
+        session['oidc_exp'] = claims.get('exp') # Token-Ablaufzeit speichern
 
         # Redirect to admin page if the user is an admin
         if is_admin:
