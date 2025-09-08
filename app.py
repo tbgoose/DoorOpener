@@ -9,6 +9,7 @@ import os
 import json
 import time
 import logging
+from logging.handlers import RotatingFileHandler
 import requests
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -39,6 +40,7 @@ def get_current_time():
     return datetime.now(TIMEZONE)
 
 # --- Logging Setup ---
+# Use a dedicated logs directory and rotate logs to avoid unbounded growth.
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 try:
     os.makedirs(log_dir, exist_ok=True)
@@ -46,10 +48,10 @@ except Exception as e:
     print(f'Could not create log directory: {e}')
 log_path = os.path.join(log_dir, 'log.txt')
 
-# Dedicated logger for door attempts
+# Dedicated logger for door attempts (audit trail)
 attempt_logger = logging.getLogger('door_attempts')
 attempt_logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler(log_path)
+file_handler = RotatingFileHandler(log_path, maxBytes=1_000_000, backupCount=5)
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
 attempt_logger.handlers = [file_handler]
 
@@ -181,7 +183,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(os.path.join(os.path.dirname(__file__), 'door_access.log'))
+        RotatingFileHandler(os.path.join(log_dir, 'door_access.log'), maxBytes=1_000_000, backupCount=3)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -207,20 +209,38 @@ def get_client_identifier():
     return primary_ip, session_id, identifier
 
 def add_security_headers(response):
-    """Add security headers for reverse proxy deployment"""
+    """Add security headers for reverse proxy deployment.
+    Note: HSTS should be set by your TLS-terminating reverse proxy.
+    """
+    # MIME sniffing & legacy XSS
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    # Modern browser policies
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Content-Security-Policy'] = ("default-src 'self'; "
-                                                   "script-src 'self' 'unsafe-inline'; "
-                                                   "style-src 'self' 'unsafe-inline'; "
-                                                   "img-src 'self' data:; "
-                                                   "font-src 'self'")
+    response.headers['Permissions-Policy'] = (
+        'geolocation=(), microphone=(), camera=(), payment=(), usb=(), '
+        'magnetometer=(), gyroscope=(), fullscreen=(self)'
+    )
+    response.headers['X-Permitted-Cross-Domain-Policies'] = 'none'
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+
+    # Strict CSP for simple app: allow only same-origin resources, inline styles/scripts as used by templates,
+    # and local API calls. Disallow base-uri/object/embed; prevent framing.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    )
+
     # Prevent caching of dynamic/admin JSON endpoints to avoid stale auth state
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
-    # Don't add HSTS here since reverse proxy should handle HTTPS
     return response
 
 def get_delay_seconds(attempt_count):
@@ -712,17 +732,38 @@ def oidc_callback():
                 return abort(401)
 
         # Validate the audience (aud) claim to ensure the token is intended for this application
-        if claims.get('aud') != oidc_client_id:
-            logger.error(f"Invalid audience: {claims.get('aud')}")
+        aud = claims.get('aud')
+        aud_valid = False
+        if isinstance(aud, list):
+            aud_valid = oidc_client_id in aud
+        else:
+            aud_valid = aud == oidc_client_id
+        if not aud_valid:
+            logger.error(f"Invalid audience: {aud}")
             abort(401, "Invalid audience")
 
+        # Validate issuer (iss) matches configured issuer
+        iss = claims.get('iss')
+        if iss and oidc_issuer and iss.rstrip('/') != oidc_issuer.rstrip('/'):
+            logger.error(f"Invalid issuer: {iss}")
+            abort(401, "Invalid issuer")
+
         # Validate the expiration time (exp) claim to ensure the token is still valid
+        # Expiration and not-before with small clock skew allowance
+        leeway = 60  # seconds
+        now_utc = datetime.now(timezone.utc)
         exp = claims.get('exp')
         if exp:
             expiration_time = datetime.fromtimestamp(exp, tz=timezone.utc)
-            if expiration_time < datetime.now(timezone.utc):
+            if expiration_time + timedelta(seconds=leeway) < now_utc:
                 logger.error("ID token has expired")
                 abort(401, "Token has expired")
+        nbf = claims.get('nbf')
+        if nbf:
+            not_before = datetime.fromtimestamp(nbf, tz=timezone.utc)
+            if not_before - timedelta(seconds=leeway) > now_utc:
+                logger.error("ID token not yet valid")
+                abort(401, "Token not yet valid")
 
         # Reset the session to prevent session fixation attacks
         session.clear()
@@ -773,13 +814,38 @@ def oidc_callback():
 
 @app.route('/admin/auth', methods=['POST'])
 def admin_auth():
+    """Authenticate admin password with progressive delays and temporary blocking.
+    Uses the same session-based counters as open_door to slow brute force attempts.
+    """
     data = request.get_json()
     password = data.get('password', '').strip() if data else ''
     remember_me = data.get('remember_me', False) if data else False
-    
+
+    # Identify client/session for throttling
+    primary_ip, session_id, identifier = get_client_identifier()
+
+    # Check if this session is currently blocked
+    now = get_current_time()
+    if session_blocked_until.get(session_id) and now < session_blocked_until[session_id]:
+        remaining = (session_blocked_until[session_id] - now).total_seconds()
+        attempt_logger.info(json.dumps({
+            "timestamp": now.isoformat(),
+            "ip": primary_ip,
+            "session": session_id[:8],
+            "user": "ADMIN",  # role indicator, not a username
+            "status": "ADMIN_SESSION_BLOCKED",
+            "details": f"Admin auth blocked for {int(remaining)}s"
+        }))
+        return jsonify({"status": "error", "message": "Too many failed attempts. Please try later."}), 429
+
     if password == admin_password:
+        # Success: clear counters for this session
+        session_failed_attempts[session_id] = 0
+        if session_id in session_blocked_until:
+            del session_blocked_until[session_id]
+
         session['admin_authenticated'] = True
-        session['admin_login_time'] = get_current_time().isoformat()
+        session['admin_login_time'] = now.isoformat()
         
         # Set session to be permanent if remember_me is checked
         if remember_me:
@@ -789,9 +855,39 @@ def admin_auth():
         else:
             session.permanent = False
             # Session expires when browser closes
-            
+
+        attempt_logger.info(json.dumps({
+            "timestamp": now.isoformat(),
+            "ip": primary_ip,
+            "session": session_id[:8],
+            "user": "ADMIN",
+            "status": "ADMIN_SUCCESS",
+            "details": "Admin login"
+        }))
         return jsonify({"status": "success"})
     else:
+        # Failure: increment counters and apply progressive delay
+        session_failed_attempts[session_id] += 1
+        delay = get_delay_seconds(session_failed_attempts[session_id])
+        if delay > 0:
+            time.sleep(delay)
+
+        # Block session after SESSION_MAX_ATTEMPTS failures
+        if session_failed_attempts[session_id] >= SESSION_MAX_ATTEMPTS:
+            session_blocked_until[session_id] = now + BLOCK_TIME
+            details = f"Invalid admin password. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes"
+        else:
+            remaining = SESSION_MAX_ATTEMPTS - session_failed_attempts[session_id]
+            details = f"Invalid admin password. {remaining} attempts remaining"
+
+        attempt_logger.info(json.dumps({
+            "timestamp": now.isoformat(),
+            "ip": primary_ip,
+            "session": session_id[:8],
+            "user": "ADMIN",
+            "status": "ADMIN_FAILURE",
+            "details": details
+        }))
         return jsonify({"status": "error", "message": "Invalid admin password"}), 403
 
 @app.route('/admin/check-auth', methods=['GET'])
