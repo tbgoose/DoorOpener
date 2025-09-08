@@ -694,6 +694,11 @@ def oidc_callback():
                 logger.error(f"ID token validation error: {e}")
                 return abort(401)
 
+        # Validate the audience (aud) claim to ensure the token is intended for this application
+        if claims.get('aud') != oidc_client_id:
+            logger.error(f"Invalid audience: {claims.get('aud')}")
+            abort(401, "Invalid audience")
+
         # Extract user information from the claims
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
         groups = claims.get('groups') or claims.get('roles') or []
