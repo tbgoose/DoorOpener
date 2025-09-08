@@ -39,8 +39,12 @@ def test_security_headers_on_index(client):
 
 
 def test_suspicious_request_blocked_open_door(client):
-    # Missing/short UA should be flagged as suspicious
-    resp = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers={'Content-Type': 'application/json'})
+    # Explicitly set a suspicious User-Agent ('curl') to avoid Werkzeug default UA
+    resp = client.post(
+        '/open-door',
+        data=json.dumps({'pin': '1234'}),
+        headers={'Content-Type': 'application/json', 'User-Agent': 'curl'}
+    )
     assert resp.status_code == 403
 
 
@@ -99,6 +103,12 @@ def test_admin_auth_success(client, app_module, monkeypatch):
 
 
 def test_testmode_pin_success(client, app_module):
+    # Reset any prior rate-limit/blocking state from earlier tests
+    app_module.global_failed_attempts = 0
+    app_module.global_last_reset = app_module.get_current_time()
+    app_module.ip_blocked_until.clear()
+    app_module.session_blocked_until.clear()
+
     app_module.user_pins['alice'] = '1234'
     app_module.test_mode = True
     r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
