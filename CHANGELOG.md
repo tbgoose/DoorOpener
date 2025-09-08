@@ -1,3 +1,40 @@
+## v[1.7.0] - 2025-09-08
+
+### 🔒 Security Enhancements (OIDC & App)
+- OIDC now fully gated: all OIDC functionality is disabled unless the OAuth client is initialized and `enabled=true` in `[oidc]`.
+- Added CSRF protection via `state` and replay protection via `nonce` in the OIDC flow.
+- Enabled PKCE (`S256`).
+- Strict token validation: issuer (`iss`) check, audience (`aud`) supports list or string, expiration (`exp`) and not‑before (`nbf`) with 60s leeway.
+- Session fixation protection: session is cleared after successful token validation before setting auth data.
+- Pinless open only when: OIDC enabled, session valid (non‑expired), user in allowed group (if configured), and `require_pin_for_oidc=false`.
+- Hardened security headers: strong CSP, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`, `Permissions-Policy`, strict referrer policy, and no‑cache on dynamic endpoints.
+- Admin login protected with progressive delays and temporary session blocking; all attempts are now audit‑logged.
+
+### 🧪 Tests & CI
+- Expanded OIDC tests: state/nonce, expired session behavior, pinless success, invalid state rejection, login redirect behavior, and OIDC gating.
+- CI pushes Docker image to GHCR on every push using `docker/login-action` with PAT or `GITHUB_TOKEN` fallback.
+
+### 🐳 Docker & Runtime
+- Adopted linuxserver.io‑style `PUID`/`PGID`/`UMASK` pattern for painless host permissions.
+- New `entrypoint.sh` aligns runtime user/group to host IDs, ensures `/app/logs` is writable, applies umask, then drops privileges via `gosu`.
+- Fixed Debian package availability in `python:3.9-slim` (trixie) by installing `passwd` (provides `useradd`/`groupadd`) instead of `shadow`.
+- `docker-compose.yml` updated to include `PUID`, `PGID`, `UMASK` envs; `config.ini` stays read‑only; `logs/` is writeable.
+
+### 📝 Logging & Observability
+- Switched to `RotatingFileHandler` for both access and audit logs to prevent unbounded growth.
+- All logs centralized under `/app/logs/` (mount `./logs:/app/logs`).
+
+### 🎨 UI/UX
+- Frontend SSO button visibility now strictly follows backend `oidc_enabled` flag.
+- Added missing `openDoorWithSSO()` function to make SSO button functional.
+
+### 📚 Documentation
+- README refreshed with compose example, `PUID/PGID/UMASK`, `SESSION_COOKIE_SECURE`, and logging paths in linuxserver.io style.
+- `.env.example` updated with new envs.
+- `config.ini.example` gains optional `[oidc] public_key` for local token signature validation.
+
+---
+
 ## v[1.6.0] - 2025-09-04
 
 ### 🚀 Features & Improvements
