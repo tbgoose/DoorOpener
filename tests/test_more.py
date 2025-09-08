@@ -1,8 +1,5 @@
-import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
-
-import pytest
 
 
 def client_app():
@@ -141,8 +138,6 @@ def test_oidc_logout_no_logout_url_returns_500(monkeypatch):
 
 
 def test_battery_out_of_range_and_none_paths(monkeypatch):
-    from app import battery_entity
-
     # Out of range value
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -177,4 +172,4 @@ def test_admin_logs_old_format_parsing(monkeypatch):
         r = c.get('/admin/logs')
         assert r.status_code == 200
         data = r.get_json()
-        assert any(l.get('user') == 'alice' for l in data.get('logs', []))
+        assert any(row.get('user') == 'alice' for row in data.get('logs', []))

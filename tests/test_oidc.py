@@ -1,5 +1,3 @@
-import pytest
-from flask import session
 
 
 def make_client():

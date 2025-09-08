@@ -1,9 +1,7 @@
 import json
 import time
-import types
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
-
 import pytest
 
 
@@ -270,4 +268,4 @@ def test_admin_logs_parsing(client, app_module, tmp_path):
         assert r.status_code == 200
         data = r.get_json()
         assert 'logs' in data and isinstance(data['logs'], list)
-        assert any(l.get('user') == 'alice' for l in data['logs'])
+        assert any(row.get('user') == 'alice' for row in data['logs'])
