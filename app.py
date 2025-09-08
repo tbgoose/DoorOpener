@@ -134,7 +134,7 @@ if oidc_enabled and OAuth is not None and all([oidc_issuer, oidc_client_id, oidc
             client_secret=oidc_client_secret,
             client_kwargs={
                 'scope': 'openid email profile groups',
-                # PKCE aktivieren
+                # Enable PKCE
                 'code_challenge_method': 'S256'
             }
         )
@@ -380,16 +380,16 @@ def open_door():
         oidc_auth = bool(session.get('oidc_authenticated'))
         oidc_exp = session.get('oidc_exp')
 
-        # NEU: Token-Ablauf prüfen
+        # Check token expiration
         if oidc_auth and (not oidc_exp or oidc_exp < time.time()):
-            # OIDC-Session ist abgelaufen, alle relevanten Session-Daten löschen
+            # OIDC session has expired, clear all relevant session data
             session.pop('oidc_authenticated', None)
             session.pop('oidc_user', None)
             session.pop('oidc_groups', None)
             session.pop('oidc_exp', None)
-            oidc_auth = False # Flag für den Rest der Funktion zurücksetzen
+            oidc_auth = False # Reset flag for the rest of the function
             logger.warning(f"OIDC session for IP {primary_ip} has expired. Re-authentication required.")
-            # Optional: Man könnte hier direkt einen Fehler zurückgeben, aber wir lassen es in die PIN-Prüfung fallen
+            # Optional: Could return an error directly, but we let it fall through to the PIN check
         
         oidc_groups = session.get('oidc_groups', [])
         oidc_user = session.get('oidc_user')
@@ -755,15 +755,15 @@ def oidc_callback():
         session['oidc_authenticated'] = True
         session['oidc_user'] = user
         session['oidc_groups'] = groups
-        session['oidc_exp'] = claims.get('exp') # Token-Ablaufzeit speichern
+        session['oidc_exp'] = claims.get('exp') # Store token expiration time
 
-        # Wenn der Benutzer Admin ist, setzen wir die Admin-Flags in der Session.
+        # If the user is an admin, set the admin flags in the session.
         if is_admin:
             session['admin_authenticated'] = True
             session['admin_login_time'] = get_current_time().isoformat()
             session['admin_user'] = user
         
-        # Alle Benutzer werden nach dem Login zur Startseite weitergeleitet.
+        # All users are redirected to the home page after login.
         return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"OIDC callback error: {e}")
