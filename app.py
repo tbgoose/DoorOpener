@@ -19,6 +19,7 @@ from configparser import ConfigParser
 import pytz
 try:
     from authlib.integrations.flask_client import OAuth
+    from authlib.jose import jwt
 except Exception:
     OAuth = None
 
@@ -660,6 +661,17 @@ def oidc_callback():
                 claims = oauth.authentik.userinfo(token=token)
             except Exception:
                 claims = {}
+
+        # Verify the ID token signature and claims
+        public_key = config.get('oidc', 'public_key', fallback=None)
+        if public_key:
+            try:
+                claims = jwt.decode(id_token, key=public_key)
+                # Überprüft Signatur, Ablaufzeit, Audience, etc.
+                claims.validate()
+            except Exception as e:
+                logger.error(f"ID token validation error: {e}")
+                return abort(401)
 
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
         groups = claims.get('groups') or claims.get('roles') or []
