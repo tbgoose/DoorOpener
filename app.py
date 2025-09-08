@@ -642,7 +642,9 @@ def login_redirect():
         # Fallback to local login page
         return redirect(url_for('admin'))
     # Start OIDC flow
-    return oauth.authentik.authorize_redirect(redirect_uri=oidc_redirect_uri)
+    # Generate a random nonce and store it in the session
+    session['oidc_nonce'] = secrets.token_hex(16)
+    return oauth.authentik.authorize_redirect(redirect_uri=oidc_redirect_uri, nonce=session['oidc_nonce'])
 
 @app.route('/oidc/callback')
 def oidc_callback():
@@ -662,12 +664,17 @@ def oidc_callback():
             except Exception:
                 claims = {}
 
+        # Validate the nonce value to prevent replay attacks
+        if claims.get('nonce') != session.pop('oidc_nonce', None):
+            # Abort if the nonce does not match
+            abort(401, "Invalid nonce")
+
         # Verify the ID token signature and claims
         public_key = config.get('oidc', 'public_key', fallback=None)
         if public_key:
             try:
                 claims = jwt.decode(id_token, key=public_key)
-                # Überprüft Signatur, Ablaufzeit, Audience, etc.
+                # Validate signature, expiration, audience, etc.
                 claims.validate()
             except Exception as e:
                 logger.error(f"ID token validation error: {e}")
