@@ -11,7 +11,7 @@ import time
 import logging
 import requests
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, session, abort, redirect, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -698,6 +698,17 @@ def oidc_callback():
         if claims.get('aud') != oidc_client_id:
             logger.error(f"Invalid audience: {claims.get('aud')}")
             abort(401, "Invalid audience")
+
+        # Validate the expiration time (exp) claim to ensure the token is still valid
+        exp = claims.get('exp')
+        if exp:
+            # Convert the expiration timestamp to a timezone-aware datetime object
+            expiration_time = datetime.fromtimestamp(exp, tz=timezone.utc)
+            
+            # Compare with the current UTC time (also timezone-aware)
+            if expiration_time < datetime.now(timezone.utc):
+                logger.error("ID token has expired")
+                abort(401, "Token has expired")
 
         # Extract user information from the claims
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
