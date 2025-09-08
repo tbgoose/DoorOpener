@@ -652,7 +652,7 @@ def open_door():
     except Exception as e:
         try:
             primary_ip, session_id, _ = get_client_identifier()
-        except:
+        except Exception:
             primary_ip = request.remote_addr
             session_id = "unknown"
         
@@ -954,7 +954,7 @@ def admin_logs():
                                 'status': log_data.get('status'),
                                 'details': log_data.get('details')
                             })
-                        except json.JSONDecodeError as e:
+                        except json.JSONDecodeError:
                             # Fallback for old format logs: timestamp - ip - user - status - details
                             try:
                                 if ' - ' in line and not line.startswith('{'):
