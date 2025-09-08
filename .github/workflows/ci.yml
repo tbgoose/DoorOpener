@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt pytest-cov bandit
 
       - name: Prepare test config and env
         run: |
@@ -58,9 +58,13 @@ jobs:
           cp config.ini tests/
           cp .env tests/
 
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           CONFIG_INI: tests/config.ini
           DOTENV: tests/.env
         run: |
-          pytest --maxfail=1 --disable-warnings -q
+          pytest --maxfail=1 --disable-warnings -q --cov=./ --cov-report=term-missing --cov-fail-under=75
+
+      - name: Security scan (bandit)
+        run: |
+          bandit -q -r . -x tests || true
