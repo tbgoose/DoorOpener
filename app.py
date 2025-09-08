@@ -641,18 +641,30 @@ def login_redirect():
     if not oauth:
         # Fallback to local login page
         return redirect(url_for('admin'))
-    # Start OIDC flow
-    # Generate a random nonce and store it in the session
-    session['oidc_nonce'] = secrets.token_hex(16)
-    return oauth.authentik.authorize_redirect(redirect_uri=oidc_redirect_uri, nonce=session['oidc_nonce'])
+    
+    # Generate a random state and store it in the session
+    session['oidc_state'] = secrets.token_hex(16)
+    
+    # Start OIDC flow with the generated state
+    return oauth.authentik.authorize_redirect(
+        redirect_uri=oidc_redirect_uri,
+        state=session['oidc_state'],
+        nonce=session['oidc_nonce']  # Nonce already implemented
+    )
 
 @app.route('/oidc/callback')
 def oidc_callback():
     if not oauth:
         return redirect(url_for('admin'))
     try:
+        # Validate the state parameter to prevent CSRF attacks
+        if request.args.get('state') != session.pop('oidc_state', None):
+            abort(401, "Invalid state")
+        
+        # Authorize the access token from the OIDC provider
         token = oauth.authentik.authorize_access_token()
-        # Prefer ID token claims, fallback to userinfo
+        
+        # Extract the ID token and claims
         id_token = token.get('id_token')
         claims = {}
         try:
@@ -666,7 +678,6 @@ def oidc_callback():
 
         # Validate the nonce value to prevent replay attacks
         if claims.get('nonce') != session.pop('oidc_nonce', None):
-            # Abort if the nonce does not match
             abort(401, "Invalid nonce")
 
         # Verify the ID token signature and claims
@@ -680,27 +691,29 @@ def oidc_callback():
                 logger.error(f"ID token validation error: {e}")
                 return abort(401)
 
+        # Extract user information from the claims
         user = claims.get('email') or claims.get('preferred_username') or claims.get('name') or 'oidc-user'
         groups = claims.get('groups') or claims.get('roles') or []
         if isinstance(groups, str):
             groups = [g.strip() for g in groups.split(',') if g.strip()]
 
-        # Determine roles
+        # Determine roles based on group membership
         is_admin = (not oidc_admin_group) or (oidc_admin_group in groups)
         is_user_allowed = (not oidc_user_group) or (oidc_user_group in groups)
 
-        # Store OIDC session
+        # Store OIDC session information
         session['oidc_authenticated'] = True
         session['oidc_user'] = user
         session['oidc_groups'] = groups
 
+        # Redirect to admin page if the user is an admin
         if is_admin:
             session['admin_authenticated'] = True
             session['admin_login_time'] = get_current_time().isoformat()
             session['admin_user'] = user
             return redirect(url_for('admin'))
         else:
-            # Normal user login; redirect to home
+            # Redirect to the home page for normal users
             return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"OIDC callback error: {e}")
