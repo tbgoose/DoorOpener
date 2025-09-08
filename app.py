@@ -757,15 +757,14 @@ def oidc_callback():
         session['oidc_groups'] = groups
         session['oidc_exp'] = claims.get('exp') # Token-Ablaufzeit speichern
 
-        # Redirect to admin page if the user is an admin
+        # Wenn der Benutzer Admin ist, setzen wir die Admin-Flags in der Session.
         if is_admin:
             session['admin_authenticated'] = True
             session['admin_login_time'] = get_current_time().isoformat()
             session['admin_user'] = user
-            return redirect(url_for('admin'))
-        else:
-            # Redirect to the home page for normal users
-            return redirect(url_for('index'))
+        
+        # Alle Benutzer werden nach dem Login zur Startseite weitergeleitet.
+        return redirect(url_for('index'))
     except Exception as e:
         logger.error(f"OIDC callback error: {e}")
         return abort(401)
