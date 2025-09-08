@@ -5,9 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_DEBUG=False
 
-# Create a non-root user to run the application
-RUN addgroup --system appgroup && \
-    adduser --system --group appuser
+# Install minimal tools for user/group management and privilege drop
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu shadow ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -15,16 +16,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-# Copy application code
+# Copy application code and entrypoint
 COPY . .
-
-# Set proper permissions
-RUN chown -R appuser:appgroup /app
-
-# Switch to non-root user
-USER appuser
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 6532
 
-# Use gunicorn with environment variable for port
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Use gunicorn with environment variable for port; entrypoint will drop privileges
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${DOOROPENER_PORT:-6532} app:app --workers 2 --threads 2 --timeout 60"]
