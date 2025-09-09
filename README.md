@@ -1,3 +1,7 @@
+[![CI](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml)
+[![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
+![Version 1.7.0](https://img.shields.io/badge/version-1.7.0-blue?style=flat-square)
+
 # 🚨 Help Wanted: 
 ## Home Assistant Add-on Needed!
 **I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
@@ -13,10 +17,9 @@
 
 A web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
-![Version 1.7.0](https://img.shields.io/badge/version-1.7.0-blue?style=flat-square)
 
-[![CI](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml)
-[![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
+
+
 
 <img width="2554" height="1187" alt="image" src="https://github.com/user-attachments/assets/e9e2fd6c-aa32-4ea1-933f-668fad3fbfc4" />
 
