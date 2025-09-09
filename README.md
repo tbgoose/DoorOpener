@@ -6,7 +6,7 @@
 ## Home Assistant Add-on Needed!
 **I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
 
-> **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker, pip, etc).
+> **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker).
 
 ## Security audit needed!
 > i am not the best at this, and i implemented some security features, but i honestly do not know how secure the OIDC implementation is. looking for someone with experience to go over it. 
@@ -15,7 +15,7 @@
 
 # 🚪 DoorOpener
 
-A web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
+A pretty web interface for controlling smart door openers via Home Assistant. Features a modern glass-morphism UI with visual keypad, per-user PINs, audio feedback, battery monitoring, and comprehensive security.
 
 
 
@@ -27,7 +27,7 @@ A web interface for controlling smart door openers via Home Assistant. Features 
 
 ## What It Does
 
-DoorOpener provides a web-based keypad interface to remotely open doors connected to Home Assistant. Users enter their personal PIN on a visual keypad, and the system securely communicates with Home Assistant to trigger the door opener.
+DoorOpener provides a web-based keypad interface to remotely open doors connected to Home Assistant. Users enter their personal PIN on a visual keypad or login with SSO, and the system securely communicates with Home Assistant to trigger the door opener.
 
 **Key Features:**
 - Visual 3x4 keypad interface with auto-submit
@@ -46,7 +46,6 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 Use Docker Compose (recommended). It handles environment, volumes, and permissions cleanly.
 
 ```yaml
-version: "3.8"
 services:
   dooropener:
     image: ghcr.io/sloth-on-meth/dooropener:latest
