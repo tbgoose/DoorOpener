@@ -8,12 +8,13 @@ import pytest
 @pytest.fixture
 def app_module():
     import app as app_module
+
     return app_module
 
 
 @pytest.fixture
 def client(app_module):
-    app_module.app.config['TESTING'] = True
+    app_module.app.config["TESTING"] = True
     with app_module.app.test_client() as c:
         with app_module.app.app_context():
             yield c
@@ -21,27 +22,32 @@ def client(app_module):
 
 def _std_headers():
     return {
-        'User-Agent': 'pytest-client/1.0 (+https://example.test) long-ua',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Content-Type': 'application/json'
+        "User-Agent": "pytest-client/1.0 (+https://example.test) long-ua",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/json",
     }
 
 
 def test_security_headers_on_index(client):
-    resp = client.get('/', headers={'User-Agent': 'pytest', 'Accept-Language': 'en'})
+    resp = client.get("/", headers={"User-Agent": "pytest", "Accept-Language": "en"})
     assert resp.status_code == 200
     # Basic security headers
-    for h in ['X-Content-Type-Options', 'X-Frame-Options', 'X-XSS-Protection',
-              'Referrer-Policy', 'Content-Security-Policy']:
+    for h in [
+        "X-Content-Type-Options",
+        "X-Frame-Options",
+        "X-XSS-Protection",
+        "Referrer-Policy",
+        "Content-Security-Policy",
+    ]:
         assert h in resp.headers
 
 
 def test_suspicious_request_blocked_open_door(client):
     # Explicitly set a suspicious User-Agent ('curl') to avoid Werkzeug default UA
     resp = client.post(
-        '/open-door',
-        data=json.dumps({'pin': '1234'}),
-        headers={'Content-Type': 'application/json', 'User-Agent': 'curl'}
+        "/open-door",
+        data=json.dumps({"pin": "1234"}),
+        headers={"Content-Type": "application/json", "User-Agent": "curl"},
     )
     assert resp.status_code == 403
 
@@ -49,55 +55,72 @@ def test_suspicious_request_blocked_open_door(client):
 def test_global_rate_limit_blocks(client, app_module):
     # Force global rate limit exceeded
     app_module.global_failed_attempts = app_module.MAX_GLOBAL_ATTEMPTS_PER_HOUR
-    resp = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    resp = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
     assert resp.status_code == 429
+
 
 def test_open_door_session_blocked_flow(client, app_module, monkeypatch):
     # Trigger session id creation
-    client.post('/open-door', data=json.dumps({}), headers=_std_headers())
+    client.post("/open-door", data=json.dumps({}), headers=_std_headers())
     with client.session_transaction() as s:
-        sid = s.get('_session_id')
+        sid = s.get("_session_id")
     assert sid
     # Block this session
-    app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(seconds=60)
-    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(
+        seconds=60
+    )
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
     assert r.status_code == 429
 
 
 def test_open_door_ip_blocked_flow(client, app_module, monkeypatch):
     # Force known identifiers from helper
-    monkeypatch.setattr(app_module, 'get_client_identifier', lambda: ('9.9.9.9', 'sessX', 'idkeyX'))
-    app_module.ip_blocked_until['idkeyX'] = app_module.get_current_time() + timedelta(seconds=60)
-    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    monkeypatch.setattr(
+        app_module, "get_client_identifier", lambda: ("9.9.9.9", "sessX", "idkeyX")
+    )
+    app_module.ip_blocked_until["idkeyX"] = app_module.get_current_time() + timedelta(
+        seconds=60
+    )
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
     assert r.status_code == 429
 
 
 def test_admin_auth_blocking(client, app_module, monkeypatch):
     # Make wrong password repeatedly and ensure session becomes blocked
-    monkeypatch.setattr(time, 'sleep', lambda s: None)
-    wrong = {'password': 'nope', 'remember_me': False}
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    wrong = {"password": "nope", "remember_me": False}
     h = _std_headers()
 
     # 3 failures (SESSION_MAX_ATTEMPTS default is 3)
     for _ in range(app_module.SESSION_MAX_ATTEMPTS):
-        r = client.post('/admin/auth', data=json.dumps(wrong), headers=h)
+        r = client.post("/admin/auth", data=json.dumps(wrong), headers=h)
         assert r.status_code == 403
     # Next attempt is blocked
-    r = client.post('/admin/auth', data=json.dumps(wrong), headers=h)
+    r = client.post("/admin/auth", data=json.dumps(wrong), headers=h)
     assert r.status_code == 429
 
 
 def test_admin_auth_success(client, app_module, monkeypatch):
     # Allow a success path by overriding admin password
-    monkeypatch.setattr(time, 'sleep', lambda s: None)
-    app_module.admin_password = 'secret'
-    r = client.post('/admin/auth', data=json.dumps({'password': 'secret', 'remember_me': True}), headers=_std_headers())
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    app_module.admin_password = "secret"
+    r = client.post(
+        "/admin/auth",
+        data=json.dumps({"password": "secret", "remember_me": True}),
+        headers=_std_headers(),
+    )
     assert r.status_code == 200
     # Verify auth flag via check-auth
-    r2 = client.get('/admin/check-auth')
+    r2 = client.get("/admin/check-auth")
     assert r2.status_code == 200
     data = r2.get_json()
-    assert data.get('authenticated') is True
+    assert data.get("authenticated") is True
 
 
 def test_testmode_pin_success(client, app_module):
@@ -107,165 +130,180 @@ def test_testmode_pin_success(client, app_module):
     app_module.ip_blocked_until.clear()
     app_module.session_blocked_until.clear()
 
-    app_module.user_pins['alice'] = '1234'
+    app_module.user_pins["alice"] = "1234"
     app_module.test_mode = True
-    r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
     assert r.status_code == 200
-    assert 'TEST MODE' in r.get_json().get('message', '')
+    assert "TEST MODE" in r.get_json().get("message", "")
 
 
 def test_admin_logout_endpoint(client):
     # Authenticate first
     with client.session_transaction() as s:
-        s['admin_authenticated'] = True
-        s['admin_login_time'] = datetime.now(timezone.utc).isoformat()
-    r = client.post('/admin/logout')
+        s["admin_authenticated"] = True
+        s["admin_login_time"] = datetime.now(timezone.utc).isoformat()
+    r = client.post("/admin/logout")
     assert r.status_code == 200
     # Confirm logged out
-    r2 = client.get('/admin/check-auth')
+    r2 = client.get("/admin/check-auth")
     assert r2.status_code == 200
-    assert r2.get_json().get('authenticated') is False
+    assert r2.get_json().get("authenticated") is False
 
 
 def test_oidc_logout_enabled_redirect(client, app_module, monkeypatch):
     # Make OIDC appear enabled
     class _DummyOAuth:
         pass
+
     app_module.oauth = _DummyOAuth()
-    app_module.oidc_issuer = 'https://auth.example.com'
+    app_module.oidc_issuer = "https://auth.example.com"
 
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    mock_resp.json.return_value = {'end_session_endpoint': 'https://auth.example.com/logout'}
-    with patch('requests.get', return_value=mock_resp):
-        r = client.get('/oidc/logout', follow_redirects=False)
+    mock_resp.json.return_value = {
+        "end_session_endpoint": "https://auth.example.com/logout"
+    }
+    with patch("requests.get", return_value=mock_resp):
+        r = client.get("/oidc/logout", follow_redirects=False)
         assert r.status_code in (302, 303)
-        assert r.headers.get('Location', '').startswith('https://auth.example.com/logout')
+        assert r.headers.get("Location", "").startswith(
+            "https://auth.example.com/logout"
+        )
 
 
 def test_admin_page_renders(client):
-    r = client.get('/admin')
+    r = client.get("/admin")
     assert r.status_code == 200
 
 
 def test_battery_non200_returns_none(client, monkeypatch):
     mock_response = MagicMock()
     mock_response.status_code = 500
-    mock_response.text = 'error'
-    with patch('requests.get', return_value=mock_response):
-        response = client.get('/battery')
+    mock_response.text = "error"
+    with patch("requests.get", return_value=mock_response):
+        response = client.get("/battery")
         assert response.status_code == 200
-        assert response.get_json()['level'] is None
+        assert response.get_json()["level"] is None
 
 
 def test_battery_exception_returns_none(client, monkeypatch):
-    with patch('requests.get', side_effect=Exception('boom')):
-        response = client.get('/battery')
+    with patch("requests.get", side_effect=Exception("boom")):
+        response = client.get("/battery")
         assert response.status_code == 200
-        assert response.get_json()['level'] is None
+        assert response.get_json()["level"] is None
 
 
 def test_auth_status_oidc_disabled_ignores_stale_session(client):
     # Explicitly disable OIDC to ensure gating is respected even with stale session keys
     import app as app_module
+
     app_module.oauth = None
     with client.session_transaction() as s:
-        s['oidc_authenticated'] = True
-        s['oidc_user'] = 'alice@example.com'
-        s['oidc_groups'] = ['dooropener-users']
-    resp = client.get('/auth/status')
+        s["oidc_authenticated"] = True
+        s["oidc_user"] = "alice@example.com"
+        s["oidc_groups"] = ["dooropener-users"]
+    resp = client.get("/auth/status")
     assert resp.status_code == 200
     data = resp.get_json()
     # OIDC not initialized => must be reported as disabled/unauthenticated
-    assert data['oidc_enabled'] in (False, 0)
-    assert data['oidc_authenticated'] in (False, 0)
+    assert data["oidc_enabled"] in (False, 0)
+    assert data["oidc_authenticated"] in (False, 0)
 
 
 def test_oidc_logout_when_disabled_clears_session(client):
     with client.session_transaction() as s:
-        s['oidc_authenticated'] = True
-        s['something_else'] = 'x'
-    resp = client.get('/oidc/logout', follow_redirects=False)
+        s["oidc_authenticated"] = True
+        s["something_else"] = "x"
+    resp = client.get("/oidc/logout", follow_redirects=False)
     # Should redirect to index and clear session
     assert resp.status_code in (302, 303)
 
 
 def test_open_door_success_switch(client, app_module, monkeypatch):
     # Configure a valid PIN and switch entity
-    app_module.user_pins['alice'] = '1234'
-    app_module.entity_id = 'switch.test_door'
+    app_module.user_pins["alice"] = "1234"
+    app_module.entity_id = "switch.test_door"
 
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.raise_for_status = lambda: None
 
-    with patch('requests.post', return_value=mock_resp):
-        r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    with patch("requests.post", return_value=mock_resp):
+        r = client.post(
+            "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+        )
         assert r.status_code == 200
-        msg = r.get_json().get('message', '')
-        assert 'Door open' in msg
+        msg = r.get_json().get("message", "")
+        assert "Door open" in msg
 
 
 def test_open_door_success_lock(client, app_module, monkeypatch):
-    app_module.user_pins['alice'] = '1234'
-    app_module.entity_id = 'lock.test_door'
+    app_module.user_pins["alice"] = "1234"
+    app_module.entity_id = "lock.test_door"
 
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.raise_for_status = lambda: None
 
-    with patch('requests.post', return_value=mock_resp):
-        r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    with patch("requests.post", return_value=mock_resp):
+        r = client.post(
+            "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+        )
         assert r.status_code == 200
 
 
 def test_open_door_success_input_boolean(client, app_module, monkeypatch):
-    app_module.user_pins['alice'] = '1234'
-    app_module.entity_id = 'input_boolean.open'
+    app_module.user_pins["alice"] = "1234"
+    app_module.entity_id = "input_boolean.open"
 
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.raise_for_status = lambda: None
 
-    with patch('requests.post', return_value=mock_resp):
-        r = client.post('/open-door', data=json.dumps({'pin': '1234'}), headers=_std_headers())
+    with patch("requests.post", return_value=mock_resp):
+        r = client.post(
+            "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+        )
         assert r.status_code == 200
 
 
 def test_battery_invalid_format(client, monkeypatch):
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {'state': 'unknown'}
+    mock_response.json.return_value = {"state": "unknown"}
 
-    with patch('requests.get', return_value=mock_response):
-        response = client.get('/battery')
+    with patch("requests.get", return_value=mock_response):
+        response = client.get("/battery")
         assert response.status_code == 200
-        assert response.get_json()['level'] is None
+        assert response.get_json()["level"] is None
 
 
 def test_admin_logs_parsing(client, app_module, tmp_path):
     # Create a log line and ensure admin logs endpoint parses it
-    logs_dir = tmp_path / 'logs'
+    logs_dir = tmp_path / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
-    log_file = logs_dir / 'log.txt'
+    log_file = logs_dir / "log.txt"
     entry = {
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'ip': '1.2.3.4',
-        'user': 'alice',
-        'status': 'SUCCESS',
-        'details': 'Door opened'
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ip": "1.2.3.4",
+        "user": "alice",
+        "status": "SUCCESS",
+        "details": "Door opened",
     }
-    log_file.write_text(json.dumps(entry) + "\n", encoding='utf-8')
+    log_file.write_text(json.dumps(entry) + "\n", encoding="utf-8")
 
     # Patch the path used inside app.admin_logs to point to our temp file
-    with patch('app.os.path.exists', return_value=True), \
-         patch('app.os.path.join', return_value=str(log_file)):
+    with patch("app.os.path.exists", return_value=True), patch(
+        "app.os.path.join", return_value=str(log_file)
+    ):
         # Authenticate admin by flagging session
         with client.session_transaction() as s:
-            s['admin_authenticated'] = True
-            s['admin_login_time'] = datetime.now(timezone.utc).isoformat()
-        r = client.get('/admin/logs')
+            s["admin_authenticated"] = True
+            s["admin_login_time"] = datetime.now(timezone.utc).isoformat()
+        r = client.get("/admin/logs")
         assert r.status_code == 200
         data = r.get_json()
-        assert 'logs' in data and isinstance(data['logs'], list)
-        assert any(row.get('user') == 'alice' for row in data['logs'])
+        assert "logs" in data and isinstance(data["logs"], list)
+        assert any(row.get("user") == "alice" for row in data["logs"])
