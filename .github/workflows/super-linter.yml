@@ -1,0 +1,31 @@
+name: Super Linter
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  super-linter:
+    name: Run Super-Linter
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Super-Linter
+        uses: super-linter/super-linter@v8.1.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: main
+          VALIDATE_ALL_CODEBASE: true
+          # Enable/disable validators as needed. Examples:
+          # VALIDATE_PYTHON: true
+          # VALIDATE_DOCKERFILE: true
+          # VALIDATE_YAML: true

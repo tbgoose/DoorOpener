@@ -1,0 +1,26 @@
+name: Python Style Checker
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  pycodestyle:
+    name: Run pycodestyle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Python Style Checker
+        uses: andymckay/pycodestyle-action@0.1.3
