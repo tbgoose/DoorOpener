@@ -750,10 +750,10 @@ def open_door():
             # Check session-based blocking first (harder to bypass)
             if session_failed_attempts[session_id] >= SESSION_MAX_ATTEMPTS:
                 session_blocked_until[session_id] = now + BLOCK_TIME
-                reason = f"Invalid PIN. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes after {SESSION_MAX_ATTEMPTS} failed attempts"
+                reason = f"Invalid PIN. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes"
             elif ip_failed_attempts[identifier] >= MAX_ATTEMPTS:
                 ip_blocked_until[identifier] = now + BLOCK_TIME
-                reason = f"Invalid PIN. Access blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes after {MAX_ATTEMPTS} failed attempts"
+                reason = f"Invalid PIN. Access blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes"
             else:
                 # Apply progressive delay based on session attempts (more secure)
                 delay = get_delay_seconds(session_failed_attempts[session_id])
