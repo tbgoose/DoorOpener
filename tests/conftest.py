@@ -21,6 +21,7 @@ TEST_CONFIG = {
     }
 }
 
+
 class MockResponse:
     """Mock response for requests.get()."""
     def __init__(self, status_code=200, json_data=None, text=None):
@@ -30,6 +31,7 @@ class MockResponse:
 
     def json(self):
         return self._json
+
 
 @pytest.fixture(autouse=True)
 def setup_mocks():
@@ -48,6 +50,7 @@ def setup_mocks():
             TEST_CONFIG.get(s, {}).get(k, kw.get('fallback', '0'))
         )
         yield
+
 
 @pytest.fixture
 def client():

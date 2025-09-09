@@ -35,6 +35,7 @@ except pytz.exceptions.UnknownTimeZoneError:
     TIMEZONE = pytz.UTC
     TZ = 'UTC'
 
+
 def get_current_time():
     """Get current time in the configured timezone"""
     return datetime.now(TIMEZONE)
@@ -149,8 +150,11 @@ if oidc_enabled and OAuth is not None and all([oidc_issuer, oidc_client_id, oidc
 ha_url = config.get('HomeAssistant', 'url', fallback='http://homeassistant.local:8123')
 ha_token = config.get('HomeAssistant', 'token')
 entity_id = config.get('HomeAssistant', 'switch_entity')  # Backward compatible; can be lock or switch
-battery_entity = config.get('HomeAssistant', 'battery_entity', 
-                           fallback=f'sensor.{entity_id.split(".")[1]}_battery')
+battery_entity = config.get(
+    'HomeAssistant',
+    'battery_entity',
+    fallback=f"sensor.{entity_id.split('.')[1]}_battery",
+)
 
 # Extract device name from entity
 if '.' in entity_id:
@@ -188,6 +192,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def get_client_identifier():
     """Get client identifier using multiple factors for better security"""
     # Use request.remote_addr as primary (can't be spoofed easily)
@@ -207,6 +212,7 @@ def get_client_identifier():
     identifier = f"{primary_ip}:{hash(user_agent + accept_lang) % 10000}"
     
     return primary_ip, session_id, identifier
+
 
 def add_security_headers(response):
     """Add security headers for reverse proxy deployment.
@@ -243,9 +249,11 @@ def add_security_headers(response):
     response.headers['Pragma'] = 'no-cache'
     return response
 
+
 def get_delay_seconds(attempt_count):
     """Calculate progressive delay: 1s, 2s, 4s, 8s, 16s"""
     return min(2 ** (attempt_count - 1), 16) if attempt_count > 0 else 0
+
 
 def check_global_rate_limit():
     """Check global rate limiting across all requests"""
@@ -258,6 +266,7 @@ def check_global_rate_limit():
         global_last_reset = now
     
     return global_failed_attempts < MAX_GLOBAL_ATTEMPTS_PER_HOUR
+
 
 def is_request_suspicious():
     """Detect suspicious request patterns"""
@@ -276,6 +285,7 @@ def is_request_suspicious():
         request.start_time = get_current_time()
     
     return False
+
 
 def validate_pin_input(pin):
     try:
@@ -408,7 +418,7 @@ def open_door():
             session.pop('oidc_user', None)
             session.pop('oidc_groups', None)
             session.pop('oidc_exp', None)
-            oidc_auth = False # Reset flag for the rest of the function
+            oidc_auth = False  # Reset flag for the rest of the function
             logger.warning(f"OIDC session for IP {primary_ip} has expired. Re-authentication required.")
             # Optional: Could return an error directly, but we let it fall through to the PIN check
         
@@ -569,7 +579,7 @@ def open_door():
                 payload = {"entity_id": entity_id}
                 response = requests.post(url, headers=ha_headers, json=payload, timeout=10)
                 
-                response.raise_for_status() # Raise an exception for bad status codes
+                response.raise_for_status()  # Raise an exception for bad status codes
                 
                 if response.status_code == 200:
                     reason = 'Door opened'
