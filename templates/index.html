@@ -563,16 +563,17 @@
                     window.navigator.vibrate(30);
                 }
 
-                // Auto-submit when PIN reaches valid length (4-8 digits)
-                // Debounced to prevent multiple submissions while holding a key
-                if (currentPin.length >= 4) {
-                    if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
-                    autoSubmitTimer = setTimeout(() => {
-                        if (!isSubmitting) openDoor();
-                    }, 180);
-                } else if (autoSubmitTimer) {
+                // Debounced auto-submit: wait until user pauses typing and length >= 4
+                if (autoSubmitTimer) {
                     clearTimeout(autoSubmitTimer);
                     autoSubmitTimer = null;
+                }
+                if (currentPin.length >= 4) {
+                    autoSubmitTimer = setTimeout(() => {
+                        if (!isSubmitting && currentPin.length >= 4) {
+                            openDoor();
+                        }
+                    }, 700);
                 }
             }
         }
