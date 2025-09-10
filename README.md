@@ -9,7 +9,7 @@
 > **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker).
 
 ## Security audit needed!
-> i am not the best at this, and i implemented some security features, but i honestly do not know how secure the OIDC implementation is. looking for someone with experience to go over it. 
+> I’ve implemented an OIDC setup with some security measures in place, but I’m not fully confident in how robust the implementation is. I’d really appreciate someone with experience taking a look and providing feedback on potential improvements.
 
 ---
 
