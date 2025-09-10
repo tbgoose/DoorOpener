@@ -440,6 +440,25 @@
                 transform: rotate(360deg) scale(1.2);
             }
         }
+
+        /* PIN dot animation */
+        .pin-dot {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(6px) scale(0.7);
+            animation: pin-pop 220ms cubic-bezier(.36, .07, .19, .97) forwards;
+        }
+
+        @keyframes pin-pop {
+            0% {
+                opacity: 0;
+                transform: translateY(6px) scale(0.7);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
     </style>
 </head>
 
@@ -449,6 +468,11 @@
         <div id="accessDeniedPopup"
             style="display:none; position:absolute; top:-60px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(0,0,0,0.95); color:#ff0000; font-family:'Courier New',monospace; font-size:2rem; padding:18px 36px; border-radius:14px; box-shadow:0 8px 32px 0 rgba(255, 0, 0, 0.18),0 2px 16px 0 rgba(0,0,0,0.3); border:2px solid #ff0000; letter-spacing:2px; text-shadow:0 0 8px #ff0000,0 0 2px #ff0000; pointer-events:none; opacity:0; transition:opacity 0.35s, top 0.35s;">
             ACCESS DENIED
+        </div>
+        <!-- Matrix-style ACCESS GRANTED popup -->
+        <div id="accessGrantedPopup"
+            style="display:none; position:absolute; top:-60px; left:50%; transform:translateX(-50%); z-index:10; background:rgba(0,0,0,0.95); color:#00ff88; font-family:'Courier New',monospace; font-size:2rem; padding:18px 36px; border-radius:14px; box-shadow:0 8px 32px 0 rgba(0, 255, 136, 0.18),0 2px 16px 0 rgba(0,0,0,0.3); border:2px solid #00ff88; letter-spacing:2px; text-shadow:0 0 8px #00ff88,0 0 2px #00ff88; pointer-events:none; opacity:0; transition:opacity 0.35s, top 0.35s;">
+            ACCESS GRANTED
         </div>
         <!-- PIN Display -->
         <div id="pinDisplay"
@@ -563,7 +587,11 @@
             if (currentPin.length === 0) {
                 display.innerHTML = '<span style="color: rgba(0,0,0,0.4);">Enter PIN</span>';
             } else {
-                display.textContent = '●'.repeat(currentPin.length);
+                let html = '';
+                for (let i = 0; i < currentPin.length; i++) {
+                    html += `<span class="pin-dot" style="animation-delay:${i * 40}ms">●</span>`;
+                }
+                display.innerHTML = html;
             }
         }
 
@@ -603,9 +631,10 @@
                             // Fancy "ta-da" vibration pattern: short-long-short with crescendo
                             window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
                         }
+                        showAccessGrantedPopup();
                     } else {
                         // Error (invalid PIN, blocked, etc)
-                        showStatus('Error: ' + data.message + 'error');
+                        showStatus('Error: ' + data.message, 'error');
 
                         // Change button to red cross on failure
                         const submitBtn = document.getElementById('submitBtn');
@@ -651,6 +680,7 @@
                     if (status === 200 && data.status === 'success') {
                         showStatus('Success: ' + data.message, 'success');
                         playSuccessSound();
+                        showAccessGrantedPopup();
                         if (window.navigator.vibrate) window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
                     } else {
                         showStatus('Error: ' + (data && data.message ? data.message : 'Unknown error'), 'error');
@@ -811,6 +841,23 @@
         // Show Matrix-style ACCESS DENIED popup
         function showAccessDeniedPopup() {
             const popup = document.getElementById('accessDeniedPopup');
+            if (popup) {
+                popup.style.display = 'block';
+                setTimeout(() => {
+                    popup.style.opacity = '1';
+                    popup.style.top = '10px';
+                }, 10);
+                setTimeout(() => {
+                    popup.style.opacity = '0';
+                    popup.style.top = '-60px';
+                    setTimeout(() => { popup.style.display = 'none'; }, 400);
+                }, 1700);
+            }
+        }
+
+        // Show Matrix-style ACCESS GRANTED popup
+        function showAccessGrantedPopup() {
+            const popup = document.getElementById('accessGrantedPopup');
             if (popup) {
                 popup.style.display = 'block';
                 setTimeout(() => {
