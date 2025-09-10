@@ -549,8 +549,11 @@
     <script>
         let batteryLevel = null;
         let currentPin = '';
+        let isSubmitting = false;
+        let autoSubmitTimer = null;
 
         function addDigit(digit) {
+            if (isSubmitting) return;
             if (currentPin.length < 8) {
                 currentPin += digit;
                 updatePinDisplay();
@@ -561,11 +564,15 @@
                 }
 
                 // Auto-submit when PIN reaches valid length (4-8 digits)
+                // Debounced to prevent multiple submissions while holding a key
                 if (currentPin.length >= 4) {
-                    // Small delay to show the digit being entered
-                    setTimeout(() => {
-                        openDoor();
-                    }, 150);
+                    if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
+                    autoSubmitTimer = setTimeout(() => {
+                        if (!isSubmitting) openDoor();
+                    }, 180);
+                } else if (autoSubmitTimer) {
+                    clearTimeout(autoSubmitTimer);
+                    autoSubmitTimer = null;
                 }
             }
         }
@@ -574,6 +581,10 @@
             if (currentPin.length > 0) {
                 currentPin = currentPin.slice(0, -1);
                 updatePinDisplay();
+                if (autoSubmitTimer) {
+                    clearTimeout(autoSubmitTimer);
+                    autoSubmitTimer = null;
+                }
 
                 // Haptic feedback
                 if (window.navigator.vibrate) {
@@ -609,6 +620,10 @@
                     return;
                 }
             }
+
+            if (isSubmitting) return; // Prevent concurrent submissions
+            isSubmitting = true;
+            if (autoSubmitTimer) { clearTimeout(autoSubmitTimer); autoSubmitTimer = null; }
 
             // Send request to open door
             fetch('/open-door', {
@@ -662,11 +677,15 @@
 
                         currentPin = '';
                         updatePinDisplay();
+                        isSubmitting = false;
                     }, 1200);
                 });
         }
 
         function openDoorWithSSO() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+            if (autoSubmitTimer) { clearTimeout(autoSubmitTimer); autoSubmitTimer = null; }
             // No PIN payload; rely on server-side OIDC session
             fetch('/open-door', {
                 method: 'POST',
@@ -698,6 +717,7 @@
                         const submitBtn = document.getElementById('submitBtn');
                         submitBtn.style.background = 'linear-gradient(135deg, #4CAF50, #45a049)';
                         submitBtn.textContent = '✓';
+                        isSubmitting = false;
                     }, 1200);
                 });
         }
@@ -905,8 +925,12 @@
             // Initialize PIN display
             updatePinDisplay();
 
-            // Add keyboard support
+            // Add keyboard support; ignore auto-repeat when key is held down
             document.addEventListener('keydown', function (event) {
+                if (event.repeat) {
+                    event.preventDefault();
+                    return;
+                }
                 if (event.key >= '0' && event.key <= '9') {
                     addDigit(event.key);
                     event.preventDefault();
@@ -914,7 +938,7 @@
                     clearPin();
                     event.preventDefault();
                 } else if (event.key === 'Enter') {
-                    openDoor();
+                    if (!isSubmitting) openDoor();
                     event.preventDefault();
                 }
             });
