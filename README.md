@@ -2,14 +2,20 @@
 [![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
 ![Version 1.7.0](https://img.shields.io/badge/version-1.7.0-blue?style=flat-square)
 
-# 🚨 Help Wanted: 
-## Home Assistant Add-on Needed!
-**I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
+<details>
+  <summary><strong>🚨 Help Wanted</strong></summary>
 
-> **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker).
+  
+  
+  ### Home Assistant Add-on Needed!
+  **I couldn't figure out how to turn this project into a proper Home Assistant add-on. If you know how, please open a PR!**
 
-## Security audit needed!
-> I’ve implemented an OIDC setup with some security measures in place, but I’m not fully confident in how robust the implementation is. I’d really appreciate someone with experience taking a look and providing feedback on potential improvements.
+  > **Important:** Any add-on solution must not break standalone usage. The project must remain fully usable both as a Home Assistant add-on _and_ as a standalone app (Docker).
+
+  ### Security audit needed!
+  > I’ve implemented an OIDC setup with some security measures in place, but I’m not fully confident in how robust the implementation is. I’d really appreciate someone with experience taking a look and providing feedback on potential improvements.
+
+</details>
 
 ---
 
