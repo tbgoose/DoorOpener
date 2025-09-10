@@ -3,7 +3,7 @@
 ![Version 1.7.0](https://img.shields.io/badge/version-1.7.0-blue?style=flat-square)
 
 <details>
-  <summary><strong>🚨 Help Wanted</strong></summary>
+  <summary><strong>🚨 Help Wanted: Security / HA Addon (please expand)</strong></summary>
 
   
   
