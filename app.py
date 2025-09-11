@@ -490,6 +490,7 @@ def open_door():
                     {
                         "status": "error",
                         "message": "Too many failed attempts. Please try again later.",
+                        "blocked_until": session_blocked_until[session_id].timestamp(),
                     }
                 ),
                 429,
@@ -513,6 +514,7 @@ def open_door():
                     {
                         "status": "error",
                         "message": "Too many failed attempts. Please try again later.",
+                        "blocked_until": ip_blocked_until[identifier].timestamp(),
                     }
                 ),
                 429,
