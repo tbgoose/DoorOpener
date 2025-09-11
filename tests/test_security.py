@@ -334,7 +334,7 @@ def test_blocked_denies_correct_pin_and_returns_blocked_until(
 
 
 def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(
-    monkeypatch,
+    client, monkeypatch
 ):
     import app as app_module
 
@@ -344,7 +344,6 @@ def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(
     app_module.oidc_user_group = ""  # allow any authenticated
     app_module.test_mode = True
 
-    client = make_client()
     with client.session_transaction() as s:
         s["_session_id"] = "sessPersist"
         s["oidc_authenticated"] = True
