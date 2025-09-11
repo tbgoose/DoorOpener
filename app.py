@@ -777,11 +777,22 @@ def open_door():
                     "details": reason,
                 }
                 attempt_logger.info(json.dumps(log_entry))
+                # Determine latest block end
+                blocked_until_ts = None
+                if (
+                    session_blocked_until[session_id]
+                    and now < session_blocked_until[session_id]
+                ):
+                    blocked_until_ts = session_blocked_until[session_id].timestamp()
+                if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+                    ts = ip_blocked_until[identifier].timestamp()
+                    blocked_until_ts = max(blocked_until_ts or ts, ts)
                 return (
                     jsonify(
                         {
                             "status": "error",
                             "message": "Too many failed attempts. Please try again later.",
+                            "blocked_until": blocked_until_ts,
                         }
                     ),
                     429,
