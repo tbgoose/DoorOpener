@@ -442,7 +442,31 @@ def open_door():
                 429,
             )
 
-        # Check session-based blocking (harder to bypass)
+        # Enforce session-based blocking stored in signed cookie (persists across workers)
+        sess_block_ts = session.get("blocked_until_ts")
+        if sess_block_ts and time.time() < float(sess_block_ts):
+            remaining = int(float(sess_block_ts) - time.time())
+            reason = f"Session blocked for {remaining} more seconds (persisted)"
+            log_entry = {
+                "timestamp": now.isoformat(),
+                "ip": primary_ip,
+                "session": session_id[:8],
+                "user": "UNKNOWN",
+                "status": "SESSION_BLOCKED",
+                "details": reason,
+            }
+            attempt_logger.info(json.dumps(log_entry))
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Too many failed attempts. Please try again later.",
+                    }
+                ),
+                429,
+            )
+
+        # Check in-memory session-based blocking (fallback when running single-worker)
         if (
             session_blocked_until[session_id]
             and now < session_blocked_until[session_id]
@@ -523,14 +547,37 @@ def open_door():
             and oidc_user_allowed
             and not require_pin_for_oidc
         ):
+            # Re-check block state right before granting access
+            if (
+                (session_blocked_until[session_id] and now < session_blocked_until[session_id])
+                or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier])
+            ):
+                remaining = 0
+                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+                    remaining = max(remaining, int((session_blocked_until[session_id] - now).total_seconds()))
+                if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+                    remaining = max(remaining, int((ip_blocked_until[identifier] - now).total_seconds()))
+                reason = f"Access blocked for {remaining} more seconds"
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": primary_ip,
+                    "session": session_id[:8],
+                    "user": oidc_user or "UNKNOWN",
+                    "status": "BLOCK_ENFORCED",
+                    "details": reason,
+                }
+                attempt_logger.info(json.dumps(log_entry))
+                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
+
             matched_user = oidc_user or "oidc-user"
-            # Reset failed attempts upon authorized OIDC use
-            ip_failed_attempts[identifier] = 0
-            session_failed_attempts[session_id] = 0
-            if identifier in ip_blocked_until:
-                del ip_blocked_until[identifier]
-            if session_id in session_blocked_until:
-                del session_blocked_until[session_id]
+            # Reset failed attempts upon authorized OIDC use only if not currently blocked
+            if not (session_blocked_until[session_id] and now < session_blocked_until[session_id]) and not (ip_blocked_until[identifier] and now < ip_blocked_until[identifier]):
+                ip_failed_attempts[identifier] = 0
+                session_failed_attempts[session_id] = 0
+                if identifier in ip_blocked_until:
+                    del ip_blocked_until[identifier]
+                if session_id in session_blocked_until:
+                    del session_blocked_until[session_id]
 
             # Test or production flow mirrors the successful PIN path
             if test_mode:
@@ -665,13 +712,36 @@ def open_door():
                 break
 
         if matched_user:
-            # Reset failed attempts on successful auth
+            # Enforce any active block even on correct PIN before proceeding
+            if (
+                (session_blocked_until[session_id] and now < session_blocked_until[session_id])
+                or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier])
+            ):
+                remaining = 0
+                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+                    remaining = max(remaining, int((session_blocked_until[session_id] - now).total_seconds()))
+                if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+                    remaining = max(remaining, int((ip_blocked_until[identifier] - now).total_seconds()))
+                reason = f"Access blocked for {remaining} more seconds"
+                log_entry = {
+                    "timestamp": now.isoformat(),
+                    "ip": primary_ip,
+                    "session": session_id[:8],
+                    "user": matched_user,
+                    "status": "BLOCK_ENFORCED",
+                    "details": reason,
+                }
+                attempt_logger.info(json.dumps(log_entry))
+                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
+
+            # Reset failed attempts on successful auth (only when no active block)
             ip_failed_attempts[identifier] = 0
             session_failed_attempts[session_id] = 0
             if identifier in ip_blocked_until:
                 del ip_blocked_until[identifier]
             if session_id in session_blocked_until:
                 del session_blocked_until[session_id]
+            session.pop("blocked_until_ts", None)
 
             # Check if test mode is enabled
             if test_mode:
@@ -775,6 +845,8 @@ def open_door():
             # Check session-based blocking first (harder to bypass)
             if session_failed_attempts[session_id] >= SESSION_MAX_ATTEMPTS:
                 session_blocked_until[session_id] = now + BLOCK_TIME
+                # Also persist in signed session cookie so block applies across workers
+                session["blocked_until_ts"] = (get_current_time() + BLOCK_TIME).timestamp()
                 reason = f"Invalid PIN. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes"
             elif ip_failed_attempts[identifier] >= MAX_ATTEMPTS:
                 ip_blocked_until[identifier] = now + BLOCK_TIME
