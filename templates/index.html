@@ -5,9 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DoorOpener</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <meta name="theme-color" content="#121212">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="alternate icon" href="/static/favicon.ico">
-    <link rel="apple-touch-icon" href="/static/favicon-192.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DoorOpener">
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -896,6 +901,10 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function () {
+            // Register service worker for PWA install/offline support
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js').catch(() => { /* ignore */ });
+            }
             // Initial battery level fetch
             fetchBatteryLevel();
 

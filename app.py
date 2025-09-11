@@ -23,6 +23,7 @@ from flask import (
     abort,
     redirect,
     url_for,
+    send_from_directory,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 from configparser import ConfigParser
@@ -215,6 +216,30 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+@app.route("/service-worker.js")
+def service_worker():
+    """Serve the service worker at the root scope for PWA installation."""
+    try:
+        return send_from_directory(
+            os.path.join(app.root_path, "static"),
+            "service-worker.js",
+            mimetype="application/javascript",
+        )
+    except Exception:
+        abort(404)
+
+@app.route("/manifest.webmanifest")
+def manifest_file():
+    """Serve the web app manifest with the correct MIME type."""
+    try:
+        return send_from_directory(
+            os.path.join(app.root_path, "static"),
+            "manifest.webmanifest",
+            mimetype="application/manifest+json",
+        )
+    except Exception:
+        abort(404)
 
 
 def get_client_identifier():
