@@ -309,7 +309,9 @@ def test_admin_logs_parsing(client, app_module, tmp_path):
         assert any(row.get("user") == "alice" for row in data["logs"])
 
 
-def test_blocked_denies_correct_pin_and_returns_blocked_until(client, app_module, monkeypatch):
+def test_blocked_denies_correct_pin_and_returns_blocked_until(
+    client, app_module, monkeypatch
+):
     # Ensure a valid PIN exists
     app_module.user_pins["alice"] = "1234"
     # Trigger session id creation
@@ -318,16 +320,22 @@ def test_blocked_denies_correct_pin_and_returns_blocked_until(client, app_module
         sid = s.get("_session_id")
     assert sid
     # Put the session into a blocked state for ~60s
-    app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(seconds=60)
+    app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(
+        seconds=60
+    )
     # Attempt with correct PIN must still be blocked
-    r = client.post("/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers())
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
     assert r.status_code == 429
     data = r.get_json()
     assert data.get("status") == "error"
     assert "blocked_until" in data
 
 
-def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(monkeypatch):
+def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(
+    monkeypatch,
+):
     import app as app_module
 
     # Mimic OIDC enabled policy allowing pinless
@@ -343,6 +351,7 @@ def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(m
         s["oidc_user"] = "eve"
         s["oidc_groups"] = ["dooropener-users"]
         import time as _time
+
         s["oidc_exp"] = int(_time.time()) + 3600
         # Simulate persisted block cookie for 60 seconds from now
         s["blocked_until_ts"] = _time.time() + 60

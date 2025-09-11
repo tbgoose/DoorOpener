@@ -217,6 +217,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 @app.route("/service-worker.js")
 def service_worker():
     """Serve the service worker at the root scope for PWA installation."""
@@ -228,6 +229,7 @@ def service_worker():
         )
     except Exception:
         abort(404)
+
 
 @app.route("/manifest.webmanifest")
 def manifest_file():
@@ -550,14 +552,23 @@ def open_door():
         ):
             # Re-check block state right before granting access
             if (
-                (session_blocked_until[session_id] and now < session_blocked_until[session_id])
-                or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier])
-            ):
+                session_blocked_until[session_id]
+                and now < session_blocked_until[session_id]
+            ) or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier]):
                 remaining = 0
-                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
-                    remaining = max(remaining, int((session_blocked_until[session_id] - now).total_seconds()))
+                if (
+                    session_blocked_until[session_id]
+                    and now < session_blocked_until[session_id]
+                ):
+                    remaining = max(
+                        remaining,
+                        int((session_blocked_until[session_id] - now).total_seconds()),
+                    )
                 if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
-                    remaining = max(remaining, int((ip_blocked_until[identifier] - now).total_seconds()))
+                    remaining = max(
+                        remaining,
+                        int((ip_blocked_until[identifier] - now).total_seconds()),
+                    )
                 reason = f"Access blocked for {remaining} more seconds"
                 log_entry = {
                     "timestamp": now.isoformat(),
@@ -570,16 +581,33 @@ def open_door():
                 attempt_logger.info(json.dumps(log_entry))
                 # Determine latest block end
                 blocked_until_ts = None
-                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+                if (
+                    session_blocked_until[session_id]
+                    and now < session_blocked_until[session_id]
+                ):
                     blocked_until_ts = session_blocked_until[session_id].timestamp()
                 if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
                     ts = ip_blocked_until[identifier].timestamp()
                     blocked_until_ts = max(blocked_until_ts or ts, ts)
-                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later.", "blocked_until": blocked_until_ts}), 429
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Too many failed attempts. Please try again later.",
+                            "blocked_until": blocked_until_ts,
+                        }
+                    ),
+                    429,
+                )
 
             matched_user = oidc_user or "oidc-user"
             # Reset failed attempts upon authorized OIDC use only if not currently blocked
-            if not (session_blocked_until[session_id] and now < session_blocked_until[session_id]) and not (ip_blocked_until[identifier] and now < ip_blocked_until[identifier]):
+            if not (
+                session_blocked_until[session_id]
+                and now < session_blocked_until[session_id]
+            ) and not (
+                ip_blocked_until[identifier] and now < ip_blocked_until[identifier]
+            ):
                 ip_failed_attempts[identifier] = 0
                 session_failed_attempts[session_id] = 0
                 if identifier in ip_blocked_until:
@@ -722,14 +750,23 @@ def open_door():
         if matched_user:
             # Enforce any active block even on correct PIN before proceeding
             if (
-                (session_blocked_until[session_id] and now < session_blocked_until[session_id])
-                or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier])
-            ):
+                session_blocked_until[session_id]
+                and now < session_blocked_until[session_id]
+            ) or (ip_blocked_until[identifier] and now < ip_blocked_until[identifier]):
                 remaining = 0
-                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
-                    remaining = max(remaining, int((session_blocked_until[session_id] - now).total_seconds()))
+                if (
+                    session_blocked_until[session_id]
+                    and now < session_blocked_until[session_id]
+                ):
+                    remaining = max(
+                        remaining,
+                        int((session_blocked_until[session_id] - now).total_seconds()),
+                    )
                 if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
-                    remaining = max(remaining, int((ip_blocked_until[identifier] - now).total_seconds()))
+                    remaining = max(
+                        remaining,
+                        int((ip_blocked_until[identifier] - now).total_seconds()),
+                    )
                 reason = f"Access blocked for {remaining} more seconds"
                 log_entry = {
                     "timestamp": now.isoformat(),
@@ -740,7 +777,15 @@ def open_door():
                     "details": reason,
                 }
                 attempt_logger.info(json.dumps(log_entry))
-                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": "Too many failed attempts. Please try again later.",
+                        }
+                    ),
+                    429,
+                )
 
             # Reset failed attempts on successful auth (only when no active block)
             ip_failed_attempts[identifier] = 0
@@ -854,7 +899,9 @@ def open_door():
             if session_failed_attempts[session_id] >= SESSION_MAX_ATTEMPTS:
                 session_blocked_until[session_id] = now + BLOCK_TIME
                 # Also persist in signed session cookie so block applies across workers
-                session["blocked_until_ts"] = (get_current_time() + BLOCK_TIME).timestamp()
+                session["blocked_until_ts"] = (
+                    get_current_time() + BLOCK_TIME
+                ).timestamp()
                 reason = f"Invalid PIN. Session blocked for {int(BLOCK_TIME.total_seconds()//60)} minutes"
             elif ip_failed_attempts[identifier] >= MAX_ATTEMPTS:
                 ip_blocked_until[identifier] = now + BLOCK_TIME
@@ -881,7 +928,10 @@ def open_door():
             attempt_logger.info(json.dumps(log_entry))
             # Include blocked_until if a block is now active
             resp = {"status": "error", "message": reason}
-            if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+            if (
+                session_blocked_until[session_id]
+                and now < session_blocked_until[session_id]
+            ):
                 resp["blocked_until"] = session_blocked_until[session_id].timestamp()
             elif ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
                 resp["blocked_until"] = ip_blocked_until[identifier].timestamp()
