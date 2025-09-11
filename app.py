@@ -461,6 +461,7 @@ def open_door():
                     {
                         "status": "error",
                         "message": "Too many failed attempts. Please try again later.",
+                        "blocked_until": float(sess_block_ts),
                     }
                 ),
                 429,
@@ -567,7 +568,14 @@ def open_door():
                     "details": reason,
                 }
                 attempt_logger.info(json.dumps(log_entry))
-                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later."}), 429
+                # Determine latest block end
+                blocked_until_ts = None
+                if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+                    blocked_until_ts = session_blocked_until[session_id].timestamp()
+                if ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+                    ts = ip_blocked_until[identifier].timestamp()
+                    blocked_until_ts = max(blocked_until_ts or ts, ts)
+                return jsonify({"status": "error", "message": "Too many failed attempts. Please try again later.", "blocked_until": blocked_until_ts}), 429
 
             matched_user = oidc_user or "oidc-user"
             # Reset failed attempts upon authorized OIDC use only if not currently blocked
@@ -871,7 +879,13 @@ def open_door():
                 "details": reason,
             }
             attempt_logger.info(json.dumps(log_entry))
-            return jsonify({"status": "error", "message": reason}), 401
+            # Include blocked_until if a block is now active
+            resp = {"status": "error", "message": reason}
+            if session_blocked_until[session_id] and now < session_blocked_until[session_id]:
+                resp["blocked_until"] = session_blocked_until[session_id].timestamp()
+            elif ip_blocked_until[identifier] and now < ip_blocked_until[identifier]:
+                resp["blocked_until"] = ip_blocked_until[identifier].timestamp()
+            return jsonify(resp), 401
 
     except Exception as e:
         try:

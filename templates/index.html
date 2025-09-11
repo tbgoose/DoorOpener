@@ -556,6 +556,7 @@
         let currentPin = '';
         let isSubmitting = false;
         let autoSubmitTimer = null;
+        let blockCountdownTimer = null;
 
         function addDigit(digit) {
             if (isSubmitting) return;
@@ -654,6 +655,9 @@
                         }
                         showAccessGrantedPopup();
                     } else {
+                        if ((status === 429 || status === 401) && data && data.blocked_until) {
+                            startBlockCountdown(data.blocked_until);
+                        }
                         // Error (invalid PIN, blocked, etc)
                         showStatus('Error: ' + data.message, 'error');
 
@@ -708,6 +712,9 @@
                         showAccessGrantedPopup();
                         if (window.navigator.vibrate) window.navigator.vibrate([50, 30, 150, 50, 80, 30, 200]);
                     } else {
+                        if ((status === 429 || status === 401) && data && data.blocked_until) {
+                            startBlockCountdown(data.blocked_until);
+                        }
                         showStatus('Error: ' + (data && data.message ? data.message : 'Unknown error'), 'error');
                         const submitBtn = document.getElementById('submitBtn');
                         submitBtn.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
@@ -743,6 +750,38 @@
                     setTimeout(() => toast.remove(), 500);
                 }, 3500);
             }
+        }
+
+        function startBlockCountdown(blockedUntilEpoch) {
+            try {
+                const container = document.getElementById('toast-container');
+                if (!container || !blockedUntilEpoch) return;
+                let el = document.getElementById('block-toast');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'block-toast';
+                    el.className = 'toast error';
+                    container.appendChild(el);
+                    // Animate in
+                    setTimeout(() => el.classList.add('show'), 10);
+                }
+                const update = () => {
+                    const now = Date.now() / 1000;
+                    const remaining = Math.max(0, Math.ceil(blockedUntilEpoch - now));
+                    const mins = Math.floor(remaining / 60);
+                    const secs = remaining % 60;
+                    el.textContent = `Too many attempts. Try again in ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                    if (remaining <= 0) {
+                        clearInterval(blockCountdownTimer);
+                        blockCountdownTimer = null;
+                        el.classList.remove('show');
+                        setTimeout(() => el.remove(), 500);
+                    }
+                };
+                if (blockCountdownTimer) clearInterval(blockCountdownTimer);
+                blockCountdownTimer = setInterval(update, 1000);
+                update();
+            } catch (e) { }
         }
 
         function updateBatteryLevel(level) {
