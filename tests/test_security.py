@@ -75,6 +75,8 @@ def test_open_door_session_blocked_flow(client, app_module, monkeypatch):
         "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
     )
     assert r.status_code == 429
+    data = r.get_json()
+    assert "blocked_until" in data
 
 
 def test_open_door_ip_blocked_flow(client, app_module, monkeypatch):
@@ -360,3 +362,102 @@ def test_persisted_session_block_denies_oidc_pinless_and_returns_blocked_until(
     data = r.get_json()
     assert data.get("status") == "error"
     assert "blocked_until" in data
+
+
+def test_inmemory_session_block_denies_oidc_pinless_and_returns_blocked_until(client):
+    import app as app_module
+
+    # Make OIDC appear enabled and allowed
+    app_module.oauth = object()
+    app_module.require_pin_for_oidc = False
+    app_module.oidc_user_group = ""
+    app_module.test_mode = True
+
+    # Establish session + OIDC
+    with client.session_transaction() as s:
+        s["_session_id"] = "sessInMem"
+        s["oidc_authenticated"] = True
+        s["oidc_user"] = "frank"
+        s["oidc_groups"] = ["dooropener-users"]
+        import time as _time
+
+        s["oidc_exp"] = int(_time.time()) + 3600
+
+    # Apply in-memory session block
+    app_module.session_blocked_until[
+        "sessInMem"
+    ] = app_module.get_current_time() + timedelta(seconds=60)
+
+    r = client.post("/open-door", json={})
+    assert r.status_code == 429
+    data = r.get_json()
+    assert data.get("status") == "error"
+    assert "blocked_until" in data
+
+
+def test_open_door_block_set_on_failure_includes_blocked_until(
+    client, app_module, monkeypatch
+):
+    # Avoid real sleeps from progressive delay
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    headers = _std_headers()
+    # Use a clean session
+    client.post("/open-door", data=json.dumps({"pin": "0000"}), headers=headers)
+    with client.session_transaction() as s:
+        sid = s.get("_session_id")
+    assert sid
+
+    # Drive attempts to the session threshold
+    for i in range(app_module.SESSION_MAX_ATTEMPTS):
+        r = client.post("/open-door", data=json.dumps({"pin": "0000"}), headers=headers)
+    # On the last failing attempt, API should return 401 with blocked_until present
+    assert r.status_code == 401
+    data = r.get_json()
+    assert data.get("status") == "error"
+    assert "blocked_until" in data
+
+    # Next attempt should be 429 with blocked_until
+    r2 = client.post("/open-door", data=json.dumps({"pin": "0000"}), headers=headers)
+    assert r2.status_code == 429
+    data2 = r2.get_json()
+    assert "blocked_until" in data2
+
+
+def test_persisted_block_cookie_blocks_correct_pin(client):
+    import app as app_module
+
+    app_module.user_pins["zoe"] = "4321"
+
+    with client.session_transaction() as s:
+        s["_session_id"] = "sessCookie"
+        import time as _time
+
+        s["blocked_until_ts"] = _time.time() + 60
+
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "4321"}), headers=_std_headers()
+    )
+    assert r.status_code == 429
+    data = r.get_json()
+    assert data.get("status") == "error"
+    assert "blocked_until" in data
+
+
+def test_success_clears_persisted_block_cookie_when_expired(client):
+    import app as app_module
+
+    app_module.user_pins["amy"] = "1234"
+
+    with client.session_transaction() as s:
+        s["_session_id"] = "sessExpired"
+        import time as _time
+
+        s["blocked_until_ts"] = _time.time() - 1  # already expired
+
+    r = client.post(
+        "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
+    )
+    assert r.status_code in (200, 502, 500)  # success in test_mode or HA error paths
+    # Confirm cookie flag cleared
+    with client.session_transaction() as s:
+        assert "blocked_until_ts" not in s
