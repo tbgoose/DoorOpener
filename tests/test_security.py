@@ -67,6 +67,9 @@ def test_open_door_session_blocked_flow(client, app_module, monkeypatch):
     with client.session_transaction() as s:
         sid = s.get("_session_id")
     assert sid
+    # Reset any prior global rate-limit state to ensure we test session block specifically
+    app_module.global_failed_attempts = 0
+    app_module.global_last_reset = app_module.get_current_time()
     # Block this session
     app_module.session_blocked_until[sid] = app_module.get_current_time() + timedelta(
         seconds=60
@@ -75,6 +78,8 @@ def test_open_door_session_blocked_flow(client, app_module, monkeypatch):
         "/open-door", data=json.dumps({"pin": "1234"}), headers=_std_headers()
     )
     assert r.status_code == 429
+    data = r.get_json()
+    assert "blocked_until" in data
     data = r.get_json()
     assert "blocked_until" in data
 
