@@ -1,3 +1,36 @@
+## v[1.8.0] - 2025-09-11
+
+### 🚀 PWA & Installability
+- Added Web App Manifest and Service Worker to enable install on mobile/desktop.
+- Register Service Worker on load; added in-app "Install App" button (Android/Chrome).
+- Manifest and icons wired; Apple touch icon supported via existing favicon.
+
+### 🎛️ Keypad & UX
+- Auto-submit is now debounced: users can type 4–8 digits; submit fires after a short pause.
+- Keyboard auto-repeat is ignored to prevent floods from held keys.
+- Submission lock prevents concurrent requests.
+- "ACCESS GRANTED / DENIED" popups now appear above the glass card.
+
+### 🔒 Security & Blocking
+- Enforce active blocks even when a correct PIN or valid OIDC session is used.
+- Persist session block across workers via signed cookie (`blocked_until_ts`).
+- All block responses now include `blocked_until` (epoch seconds) for client countdowns.
+- Frontend shows a live countdown toast until the block expires.
+
+### 🧪 Tests
+- Added tests verifying:
+  - Correct PIN during active block still returns 429 and includes `blocked_until`.
+  - Persisted session block denies OIDC pinless open and includes `blocked_until`.
+
+### 🛠️ CI & Linting
+- Removed Black from CI to avoid repo-vs-image formatting differences.
+- `lint` job now runs Ruff only; separate pycodestyle workflow runs style checks without formatting.
+
+### 📦 Version
+- Bumped version to 1.8.0.
+
+---
+
 ## v[1.7.0] - 2025-09-08
 
 ### 🔒 Security Enhancements (OIDC & App)
