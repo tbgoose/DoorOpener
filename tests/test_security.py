@@ -412,8 +412,8 @@ def test_open_door_block_set_on_failure_includes_blocked_until(
         sid = s.get("_session_id")
     assert sid
 
-    # Drive attempts to the session threshold
-    for i in range(app_module.SESSION_MAX_ATTEMPTS):
+    # Drive attempts to the session threshold (we've already made 1 failing attempt above)
+    for i in range(app_module.SESSION_MAX_ATTEMPTS - 1):
         r = client.post("/open-door", data=json.dumps({"pin": "0000"}), headers=headers)
     # On the last failing attempt, API should return 401 with blocked_until present
     assert r.status_code == 401
