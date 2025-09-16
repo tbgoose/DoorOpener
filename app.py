@@ -1557,7 +1557,8 @@ def admin_users_create():
     except KeyError:
         return jsonify({"error": "User already exists"}), 409
     except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        logger.warning(f"ValueError creating user '{username}': {ve}")
+        return jsonify({"error": "Invalid input"}), 400
     except Exception as e:
         logger.error(f"Error creating user: {e}")
         return jsonify({"error": "Failed to create user"}), 500
@@ -1589,7 +1590,8 @@ def admin_users_update(username: str):
     except KeyError:
         return jsonify({"error": "User not found"}), 404
     except ValueError as ve:
-        return jsonify({"error": str(ve)}), 400
+        logger.warning(f"ValueError updating user '{username}': {ve}")
+        return jsonify({"error": "Invalid input"}), 400
     except Exception as e:
         logger.error(f"Error updating user: {e}")
         return jsonify({"error": "Failed to update user"}), 500
