@@ -1404,6 +1404,92 @@ def admin_logs():
         return jsonify({"error": "Failed to load logs"}), 500
 
 
+@app.route("/admin/logs/clear", methods=["POST"])
+def admin_logs_clear():
+    """Clear logs: either all, or only remove test-mode entries.
+
+    Body: {"mode": "all" | "test_only"}
+    """
+    # Check if admin is authenticated
+    if not session.get("admin_authenticated"):
+        return jsonify({"error": "Authentication required"}), 401
+
+    body = request.get_json(silent=True) or {}
+    mode = (body.get("mode") or "all").lower()
+
+    try:
+        removed = 0
+        kept = 0
+        if mode == "all":
+            # Truncate file
+            try:
+                with open(log_path, "w", encoding="utf-8"):
+                    pass
+            except FileNotFoundError:
+                # Nothing to clear
+                pass
+        elif mode == "test_only":
+            # Filter out lines that look like TEST MODE entries
+            import tempfile
+
+            lines = []
+            try:
+                with open(log_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+            except FileNotFoundError:
+                lines = []
+
+            filtered = []
+            for line in lines:
+                try:
+                    json_start = line.find("{")
+                    candidate = line[json_start:] if json_start != -1 else line
+                    obj = json.loads(candidate)
+                    details = str(obj.get("details", ""))
+                    # Remove entries that explicitly contain TEST MODE in details
+                    if "TEST MODE" in details:
+                        removed += 1
+                        continue
+                    filtered.append(line)
+                except Exception:
+                    # If unparsable, keep line
+                    filtered.append(line)
+            kept = len(filtered)
+
+            # Atomic write
+            fd, tmp_path = tempfile.mkstemp(
+                prefix="log.", suffix=".txt", dir=os.path.dirname(log_path) or None
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as tmp:
+                    tmp.writelines(filtered)
+                os.replace(tmp_path, log_path)
+            finally:
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
+        else:
+            return jsonify({"error": "Invalid mode"}), 400
+
+        attempt_logger.info(
+            json.dumps(
+                {
+                    "timestamp": get_current_time().isoformat(),
+                    "ip": get_primary_ip_and_identifier()[0],
+                    "user": "ADMIN",
+                    "status": "ADMIN_LOGS_CLEAR",
+                    "details": f"mode={mode}, removed={removed}, kept={kept}",
+                }
+            )
+        )
+        return jsonify({"status": "ok", "mode": mode, "removed": removed, "kept": kept})
+    except Exception as e:
+        logger.error(f"Exception in admin_logs_clear: {e}")
+        return jsonify({"error": "Failed to clear logs"}), 500
+
+
 # --- Admin: User Management Endpoints ---
 
 

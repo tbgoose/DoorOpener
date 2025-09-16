@@ -358,6 +358,9 @@
                 </label>
             </div>
                 <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
+                <div style="flex:1"></div>
+                <button class="refresh-btn" style="background: linear-gradient(135deg, #8e24aa, #6a1b9a);" onclick="clearLogs('test_only')">🧪 Clear Test Data</button>
+                <button class="refresh-btn" style="background: linear-gradient(135deg, #e53935, #c62828);" onclick="openClearAll()">🧹 Clear All Logs</button>
             </div>
 
             <div id="logContainer" class="table-responsive">
@@ -752,12 +755,12 @@
 
         async function migrateUser(username, pin) {
             try {
-                const res = await fetch('/admin/users/migrate', {
+                const res = await fetch('/admin/users/' + encodeURIComponent(username) + '/migrate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
                     cache: 'no-store',
-                    body: JSON.stringify({ username, pin }),
+                    body: JSON.stringify(pin ? { pin } : {}),
                 });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
