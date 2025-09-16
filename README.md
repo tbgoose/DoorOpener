@@ -2,69 +2,7 @@
 
 > **⚠️ BREAKING CHANGE**: Starting with v1.10.0, user management has been completely redesigned with a new JSON-based user store. **Existing users in `config.ini` [pins] section need to be migrated!**
 
-## 🔄 **Migration Required**
-
-**If you have users configured in `config.ini` [pins] section:**
-
-1. **Update to v1.10.0** (your existing users will continue to work temporarily)
-2. **Access Admin Panel** → Navigate to `http://your-dooropener:5000/admin`
-3. **Go to Users Tab** → Click on the "Users" tab in the admin interface
-4. **Click "Migrate All"** → This will move all your config.ini users to the new JSON store
-5. **Verify Migration** → Check that all users appear in the Users tab with "store" source
-
-**Benefits of Migration:**
-- ✅ Edit user PINs without restarting the container
-- ✅ Activate/deactivate users instantly
-- ✅ Track usage statistics ("Times Used" counter)
-- ✅ Full user management via web interface
-- ✅ No more manual config.ini editing
-
-**⚠️ Important:** The `config.ini` [pins] section will be **deprecated** in a future version. Migrate now to avoid disruption!
-
----
-
-## 🔧 **Migration Guide for v1.10.0**
-
-**If you're upgrading from a previous version, follow these steps:**
-
-### 1. **Update Docker Compose**
-
-Add the new `users.json` volume bind and make `config.ini` read-write:
-
-```yaml
-services:
-  dooropener:
-    image: ghcr.io/sloth-on-meth/dooropener:latest
-    volumes:
-      - ./config.ini:/app/config.ini:rw  # ⚠️ Changed from :ro to :rw
-      - ./users.json:/app/users.json    # 🆕 New volume for user data
-      - ./logs:/app/logs
-    # ... rest of your config
-```
-
-### 2. **Start Container & Migrate Users**
-
-**Note:** The app will automatically create `users.json` when needed - no manual file creation required!
-
-```bash
-# Start the updated container
-docker-compose up -d
-
-# Access admin panel 
-# Go to Users tab → Click "Migrate All" button
-```
-
-### 3. **Verify Migration**
-
-- Check that all users appear in the Users tab with "store" source
-- Test that PINs still work
-- Your `config.ini` [pins] section will be automatically cleaned up
-
-**Why these changes?**
-- `config.ini:rw` - Allows automatic removal of migrated users from config
-- `users.json` - New persistent storage for user data with advanced features
-
----
+see the CHANGELOG.MD for instructions
 
 [![CI](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
