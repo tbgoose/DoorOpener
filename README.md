@@ -1,3 +1,28 @@
+# 🚨 !MAJOR CHANGE! - v1.10.0 User Management Migration
+
+> **⚠️ BREAKING CHANGE**: Starting with v1.10.0, user management has been completely redesigned with a new JSON-based user store. **Existing users in `config.ini` [pins] section need to be migrated!**
+
+## 🔄 **Migration Required**
+
+**If you have users configured in `config.ini` [pins] section:**
+
+1. **Update to v1.10.0** (your existing users will continue to work temporarily)
+2. **Access Admin Panel** → Navigate to `http://your-dooropener:5000/admin`
+3. **Go to Users Tab** → Click on the "Users" tab in the admin interface
+4. **Click "Migrate All"** → This will move all your config.ini users to the new JSON store
+5. **Verify Migration** → Check that all users appear in the Users tab with "store" source
+
+**Benefits of Migration:**
+- ✅ Edit user PINs without restarting the container
+- ✅ Activate/deactivate users instantly
+- ✅ Track usage statistics ("Times Used" counter)
+- ✅ Full user management via web interface
+- ✅ No more manual config.ini editing
+
+**⚠️ Important:** The `config.ini` [pins] section will be **deprecated** in a future version. Migrate now to avoid disruption!
+
+---
+
 [![CI](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
 ![Version 1.10.0](https://img.shields.io/badge/version-1.10.0-blue?style=flat-square)
