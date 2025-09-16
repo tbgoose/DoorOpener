@@ -111,28 +111,12 @@ config.read(config_path)
 
 
 def save_config() -> None:
-    """Persist the current in-memory config to disk atomically where possible.
+    """Persist the current in-memory config to disk directly.
 
     Note: If config.ini is mounted read-only, this will raise a PermissionError or OSError.
     """
-    import tempfile
-
-    # Write to a temp file in the same directory as config.ini
-    config_dir = os.path.dirname(config_path) or "."
-    fd, temp_path = tempfile.mkstemp(suffix=".tmp", prefix="config.", dir=config_dir)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as temp_file:
-            config.write(temp_file)
-        # Atomically replace the original file
-        os.replace(temp_path, config_path)
-    except Exception:
-        # Clean up temp file on failure
-        try:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-        except Exception:
-            pass
-        raise
+    with open(config_path, "w", encoding="utf-8") as f:
+        config.write(f)
 
 
 # If no env secret key was provided, allow overriding the temporary random with config.ini
