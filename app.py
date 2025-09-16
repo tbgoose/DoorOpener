@@ -1723,9 +1723,22 @@ def admin_users_migrate_all():
         if users_store.user_exists(username):
             continue
 
-        # Create in JSON store (config entry will be ignored once this exists)
+        # Create in JSON store
         try:
             users_store.create_user(username, existing_pin, True)
+
+            # Remove from config.ini after successful migration
+            try:
+                if config.has_option("pins", username):
+                    config.remove_option("pins", username)
+                    save_config()
+                    # Update in-memory user_pins
+                    user_pins.pop(username, None)
+            except Exception as config_err:
+                logger.warning(
+                    f"Failed to remove {username} from config.ini: {config_err}"
+                )
+
             attempt_logger.info(
                 json.dumps(
                     {
