@@ -1472,7 +1472,7 @@ def admin_logs_clear():
             json.dumps(
                 {
                     "timestamp": get_current_time().isoformat(),
-                    "ip": get_primary_ip_and_identifier()[0],
+                    "ip": get_client_identifier()[0],
                     "user": "ADMIN",
                     "status": "ADMIN_LOGS_CLEAR",
                     "details": f"mode={mode}, removed={removed}, kept={kept}",
@@ -1548,7 +1548,7 @@ def admin_users_create():
             json.dumps(
                 {
                     "timestamp": get_current_time().isoformat(),
-                    "ip": get_primary_ip_and_identifier()[0],
+                    "ip": get_client_identifier()[0],
                     "user": "ADMIN",
                     "status": "ADMIN_USER_CREATE",
                     "details": f"username={username}",
@@ -1580,7 +1580,7 @@ def admin_users_update(username: str):
             json.dumps(
                 {
                     "timestamp": get_current_time().isoformat(),
-                    "ip": get_primary_ip_and_identifier()[0],
+                    "ip": get_client_identifier()[0],
                     "user": "ADMIN",
                     "status": "ADMIN_USER_UPDATE",
                     "details": f"username={username}",
@@ -1609,7 +1609,7 @@ def admin_users_delete(username: str):
             json.dumps(
                 {
                     "timestamp": get_current_time().isoformat(),
-                    "ip": get_primary_ip_and_identifier()[0],
+                    "ip": get_client_identifier()[0],
                     "user": "ADMIN",
                     "status": "ADMIN_USER_DELETE",
                     "details": f"username={username}",
