@@ -1724,23 +1724,11 @@ def admin_users_migrate_all():
         if not (existing_pin.isdigit() and 4 <= len(existing_pin) <= 8):
             failed.append({"username": username, "error": "invalid_format"})
             continue
-        # First try to remove from config and save
-        try:
-            if not config.has_section("pins"):
-                config.add_section("pins")
-            if config.has_option("pins", username):
-                config.remove_option("pins", username)
-            save_config()
-        except Exception as e:
-            failed.append(
-                {"username": username, "error": "config_write_failed", "detail": str(e)}
-            )
+        # Skip if user already exists in JSON store
+        if users_store.user_exists(username):
             continue
 
-        # Update in-memory baseline now that config is saved
-        user_pins.pop(username, None)
-
-        # Create in store; rollback config on failure
+        # Create in JSON store (config entry will be ignored once this exists)
         try:
             users_store.create_user(username, existing_pin, True)
             attempt_logger.info(
@@ -1756,15 +1744,6 @@ def admin_users_migrate_all():
             )
             migrated += 1
         except Exception as e:
-            # rollback config
-            try:
-                if not config.has_section("pins"):
-                    config.add_section("pins")
-                config.set("pins", username, existing_pin)
-                save_config()
-                user_pins[username] = existing_pin
-            except Exception:
-                pass
             failed.append(
                 {"username": username, "error": "store_write_failed", "detail": str(e)}
             )
