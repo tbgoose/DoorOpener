@@ -24,8 +24,6 @@ from flask import (
     redirect,
     url_for,
     send_from_directory,
-    g,
-    Response,
 )
 from users_store import UsersStore
 from werkzeug.middleware.proxy_fix import ProxyFix

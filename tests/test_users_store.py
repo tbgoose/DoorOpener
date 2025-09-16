@@ -2,7 +2,7 @@ import pytest
 import json
 import os
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from datetime import datetime
 
 from users_store import UsersStore, _now_iso

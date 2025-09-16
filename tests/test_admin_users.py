@@ -1,5 +1,4 @@
 import pytest
-import json
 import tempfile
 import os
 from datetime import datetime, timezone
@@ -117,6 +116,8 @@ def test_admin_users_list_with_config_users(mock_users_store, monkeypatch):
     assert charlie["source"] == "config"
     assert charlie["can_edit"] is False
     assert "times_used" not in charlie  # Config users don't have usage tracking
+    assert dave["source"] == "config"
+    assert dave["can_edit"] is False
 
 
 def test_admin_users_list_mixed_sources(mock_users_store, monkeypatch):
