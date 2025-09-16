@@ -359,7 +359,6 @@
             </div>
                 <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
                 <div style="flex:1"></div>
-                <button id="btnClearTest" class="refresh-btn" style="background: linear-gradient(135deg, #8e24aa, #6a1b9a);" onclick="clearLogs('test_only','btnClearTest')">🧪 Clear Test Data</button>
                 <button id="btnClearAll" class="refresh-btn" style="background: linear-gradient(135deg, #e53935, #c62828);" onclick="openClearAll('btnClearAll')">🧹 Clear All Logs</button>
             </div>
 
@@ -551,7 +550,7 @@
                 renderUsers(data.users || []);
             } catch (e) {
                 const tbody = document.getElementById('usersTableBody');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="no-logs">Error loading users</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="no-logs">Error loading users</td></tr>';
             }
         }
 
