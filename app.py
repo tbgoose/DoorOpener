@@ -1624,6 +1624,81 @@ def admin_users_migrate(username: str):
         return jsonify({"error": "Failed to migrate user"}), 500
 
 
+@app.route("/admin/users/migrate-all", methods=["POST"])
+def admin_users_migrate_all():
+    """Migrate all config-only users into the JSON store.
+
+    Each user is migrated individually with safe config update and rollback on failure.
+    Returns summary of successes and failures.
+    """
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    if not user_pins:
+        return jsonify({"migrated": 0, "failed": []}), 200
+
+    migrated = 0
+    failed = []
+    # Copy list of usernames to avoid mutation during loop
+    candidates = list(user_pins.keys())
+
+    for username in candidates:
+        existing_pin = user_pins.get(username)
+        if not isinstance(existing_pin, str):
+            failed.append({"username": username, "error": "invalid_pin"})
+            continue
+        # Validate format
+        if not (existing_pin.isdigit() and 4 <= len(existing_pin) <= 8):
+            failed.append({"username": username, "error": "invalid_format"})
+            continue
+        # First try to remove from config and save
+        try:
+            if not config.has_section("pins"):
+                config.add_section("pins")
+            if config.has_option("pins", username):
+                config.remove_option("pins", username)
+            save_config()
+        except Exception as e:
+            failed.append(
+                {"username": username, "error": "config_write_failed", "detail": str(e)}
+            )
+            continue
+
+        # Update in-memory baseline now that config is saved
+        user_pins.pop(username, None)
+
+        # Create in store; rollback config on failure
+        try:
+            users_store.create_user(username, existing_pin, True)
+            attempt_logger.info(
+                json.dumps(
+                    {
+                        "timestamp": get_current_time().isoformat(),
+                        "ip": get_primary_ip_and_identifier()[0],
+                        "user": "ADMIN",
+                        "status": "ADMIN_USER_MIGRATE",
+                        "details": f"username={username}",
+                    }
+                )
+            )
+            migrated += 1
+        except Exception as e:
+            # rollback config
+            try:
+                if not config.has_section("pins"):
+                    config.add_section("pins")
+                config.set("pins", username, existing_pin)
+                save_config()
+                user_pins[username] = existing_pin
+            except Exception:
+                pass
+            failed.append(
+                {"username": username, "error": "store_write_failed", "detail": str(e)}
+            )
+
+    status = 200 if not failed else 207  # multi-status semantics
+    return jsonify({"migrated": migrated, "failed": failed}), status
+
+
 @app.route("/oidc/logout")
 def oidc_logout():
     """Logout from OIDC and clear session"""
