@@ -1750,8 +1750,10 @@ def admin_users_migrate_all():
             )
             migrated += 1
         except Exception as e:
+            # Log full exception details server-side for later troubleshooting
+            logger.error(f"Failed to migrate user {username}: {e}", exc_info=True)
             failed.append(
-                {"username": username, "error": "store_write_failed", "detail": str(e)}
+                {"username": username, "error": "store_write_failed", "detail": "internal_error"}
             )
 
     status = 200 if not failed else 207  # multi-status semantics
