@@ -32,6 +32,9 @@ class UsersStore:
         self.data: Dict[str, Any] = {"users": {}}
         self._loaded = False
 
+    def _ensure_loaded(self) -> None:
+        self._load_file()
+
     def _load_file(self) -> None:
         if self._loaded:
             return
@@ -87,6 +90,7 @@ class UsersStore:
                 "created_at": meta.get("created_at"),
                 "updated_at": meta.get("updated_at"),
                 "last_used_at": meta.get("last_used_at"),
+                "times_used": meta.get("times_used", 0),
             }
             if include_pins:
                 item["pin"] = meta.get("pin")
@@ -125,6 +129,7 @@ class UsersStore:
             "created_at": now,
             "updated_at": now,
             "last_used_at": None,
+            "times_used": 0,
         }
         self._save_atomic()
 
@@ -157,4 +162,12 @@ class UsersStore:
         self._ensure_loaded()
         if username in self.data["users"]:
             self.data["users"][username]["last_used_at"] = _now_iso()
+            # Increment times_used counter, defaulting to 0 if not present (for existing users)
+            self.data["users"][username]["times_used"] = (
+                self.data["users"][username].get("times_used", 0) + 1
+            )
             self._save_atomic()
+
+    def user_exists(self, username: str) -> bool:
+        self._ensure_loaded()
+        return username in self.data["users"]

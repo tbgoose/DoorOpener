@@ -1,3 +1,32 @@
+## v[1.10.0] - 2025-09-16
+
+### 👥 User Management & Migration System
+- **NEW**: Complete admin UI for user management with tabbed interface (Logs/Users)
+- **NEW**: JSON-based user store (`users.json`) with atomic operations and host persistence
+- **NEW**: "Migrate All" functionality to bulk migrate config-only users from `config.ini` to JSON store
+- **NEW**: Full CRUD operations for JSON store users (Create, Edit, Delete, Activate/Deactivate)
+- **NEW**: Toast notifications throughout admin UI replacing blocking alert dialogs
+- **NEW**: Log management with "Clear Test Data" and "Clear All Logs" buttons
+- **NEW**: Button busy states with inline progress indicators for long-running operations
+- **IMPROVED**: User PIN resolution now prioritizes JSON store over config.ini entries
+- **IMPROVED**: Migration process removes users from config.ini after successful JSON store creation
+- **IMPROVED**: Admin UI uses modern modals and responsive design patterns
+- **BREAKING**: Individual user migration removed - use "Migrate All" for bulk operations
+- **DEPRECATION**: config.ini [pins] section will be removed in a future version - migrate to JSON store
+
+### 🔧 Technical Improvements
+- Added `users.json` volume bind in docker-compose.yml for data persistence
+- Simplified config.ini writing to avoid temporary file permission issues
+- Enhanced error handling and logging for user management operations
+- Added `user_exists()` method to UsersStore class
+- Improved admin session authentication across all user management endpoints
+
+### 📝 Migration Instructions
+- Existing config.ini [pins] users can be migrated via Admin → Users → "Migrate All"
+- Migration preserves existing PINs and removes entries from config.ini
+- JSON store users gain full management capabilities (edit PIN, activate/deactivate)
+- No downtime required - config and JSON users work simultaneously during transition
+
 ## v[1.9.0] - 2025-09-16
 
 ### 🔐 TLS & Self‑Signed Certificates

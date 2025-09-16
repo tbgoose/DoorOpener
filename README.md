@@ -1,6 +1,6 @@
 [![CI](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml/badge.svg?branch=main)](https://github.com/Sloth-on-meth/DoorOpener/actions/workflows/docker-build.yml)
-![Version 1.9.0](https://img.shields.io/badge/version-1.9.0-blue?style=flat-square)
+![Version 1.10.0](https://img.shields.io/badge/version-1.10.0-blue?style=flat-square)
 
 <details>
   <summary><strong>🚨 Help Wanted: Security / HA Addon (please expand)</strong></summary>
@@ -37,11 +37,12 @@ DoorOpener provides a web-based keypad interface to remotely open doors connecte
 
 **Key Features:**
 - Visual 3x4 keypad interface with auto-submit
-- Individual PINs for each user
+- Individual PINs for each user with JSON-based user management
 - Audio feedback (success chimes, failure sounds)
 - Real-time battery monitoring for Zigbee devices
 - Multi-layer security with rate limiting and IP blocking
-- Admin dashboard for viewing access logs
+- **NEW**: Complete admin UI with user management and migration tools
+- **NEW**: Toast notifications and modern responsive design
 - Test mode for safe development
 - **Supports Home Assistant `switch`, `lock`, and `input_boolean` entities**
 
@@ -145,8 +146,10 @@ switch_entity = switch.your_door_opener
 ca_bundle =
 
 [pins]
-alice = 1234
-bob = 5678
+# TO BE DEPRECATED: Legacy PIN storage - will be removed in a future version
+# Migrate to JSON store via Admin UI for full management capabilities
+# alice = 1234
+# bob = 5678
 
 [admin]
 admin_password = secure_password
@@ -192,6 +195,76 @@ user_group = dooropener-users
 # If true, OIDC users still must enter a PIN (no pinless open)
 require_pin_for_oidc = false
 ```
+
+## User Management & Migration
+
+### JSON User Store
+
+DoorOpener v1.10.0+ includes a modern JSON-based user management system alongside the traditional config.ini [pins] section. The JSON store (`users.json`) provides:
+
+- **Full CRUD operations**: Create, edit, delete users via admin UI
+- **User activation/deactivation**: Temporarily disable users without deletion
+- **Persistent storage**: Data survives container restarts via volume binding
+- **Priority system**: JSON store users override config.ini entries
+
+### Migrating from config.ini to JSON Store
+
+**Why migrate?**
+- **Future-proof**: config.ini [pins] will be deprecated and removed in a future version
+- Gain full user management capabilities (edit PINs, activate/deactivate)
+- Modern admin UI with toast notifications and responsive design
+- No need to restart containers when managing users
+- Persistent user data with automatic backups
+
+**Migration Process:**
+
+1. **Access Admin UI**: Navigate to `http://your-server:6532/admin` and login
+2. **Switch to Users Tab**: Click the "👥 Users" tab in the admin dashboard
+3. **Review Config Users**: You'll see existing config.ini users marked as "Config-only"
+4. **Bulk Migration**: Click the "⬇️ Migrate All" button
+5. **Confirm**: Review the migration dialog and click "OK"
+6. **Automatic Process**: 
+   - Users are created in JSON store with existing PINs
+   - Original entries are removed from config.ini
+   - No service interruption or restarts required
+
+**After Migration:**
+- Users appear in the admin UI with full management options
+- Edit PINs, activate/deactivate, or delete users as needed
+- Add new users directly through the "➕ Add User" button
+- All changes are immediate and persistent
+
+**Volume Binding (Important):**
+Ensure your docker-compose.yml includes the users.json volume bind:
+
+```yaml
+volumes:
+  - ./config.ini:/app/config.ini:rw
+  - ./logs:/app/logs
+  - ./users.json:/app/users.json  # Required for persistence
+```
+
+### User Management Features
+
+**Admin UI Capabilities:**
+- **Create Users**: Add new users with custom PINs (4-8 digits)
+- **Edit Users**: Modify existing user PINs
+- **Activate/Deactivate**: Temporarily disable users without deletion
+- **Delete Users**: Permanently remove users from the system
+- **View Activity**: See creation dates, last used timestamps
+- **Log Management**: Clear test data or all logs with confirmation
+
+**Security Features:**
+- All user management requires admin authentication
+- Changes are logged with timestamps and admin details
+- Atomic operations prevent data corruption
+- Input validation for usernames and PINs
+
+**Best Practices:**
+- Migrate config.ini users early to gain full management capabilities
+- Use descriptive usernames (alphanumeric, underscore, dash, dot allowed)
+- Regularly review user activity via the admin dashboard
+- Use "Clear Test Data" to remove development/testing log entries
 
 Notes:
 - In development over HTTP, set `SESSION_COOKIE_SECURE=false` (env) so the browser sends the session cookie.

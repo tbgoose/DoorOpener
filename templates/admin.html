@@ -402,12 +402,13 @@
                                 <th>Source</th>
                                 <th>Created</th>
                                 <th>Last Used</th>
+                                <th>Times Used</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
                             <tr>
-                                <td colspan="6" class="no-logs">Loading users...</td>
+                                <td colspan="7" class="no-logs">Loading users...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -558,14 +559,22 @@
             const tbody = document.getElementById('usersTableBody');
             if (!tbody) return;
             if (!users.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="no-logs">No users found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="no-logs">No users found</td></tr>';
                 return;
+            }
+            
+            // Show/hide Migrate All button based on config-only users
+            const configUsers = users.filter(u => u.source === 'config');
+            const migrateAllBtn = document.getElementById('btnMigrateAll');
+            if (migrateAllBtn) {
+                migrateAllBtn.style.display = configUsers.length > 0 ? 'inline-block' : 'none';
             }
             const rows = users.map(u => {
                 const canEdit = !!u.can_edit;
                 const activeStr = u.active ? 'Yes' : 'No';
                 const created = u.created_at ? new Date(u.created_at).toLocaleString() : '-';
                 const lastUsed = u.last_used_at ? new Date(u.last_used_at).toLocaleString() : '-';
+                const timesUsed = u.times_used || 0;
                 const src = u.source || 'store';
                 let actionsHtml = '';
                 if (canEdit) {
@@ -575,10 +584,9 @@
                         <button class="refresh-btn" style="padding:6px 10px; background: linear-gradient(135deg, #e53935, #c62828);" onclick="deleteUser('${u.username}')">Delete</button>
                     `;
                 } else {
-                    // Config-only user: show Migrate action
+                    // Config-only user: show status only
                     actionsHtml = `
-                        <span style="color:rgba(0,0,0,0.6); margin-right:6px;">Config-only</span>
-                        <button class="refresh-btn" style="padding:6px 10px; background: linear-gradient(135deg, #7b1fa2, #6a1b9a);" onclick="openMigrateUser('${u.username}')">Migrate</button>
+                        <span style="color:rgba(0,0,0,0.6);">Config-only</span>
                     `;
                 }
                 return `
@@ -588,9 +596,10 @@
                         <td data-label="Source">${src}</td>
                         <td data-label="Created">${created}</td>
                         <td data-label="Last Used">${lastUsed}</td>
+                        <td data-label="Times Used">${timesUsed}</td>
                         <td data-label="Actions" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">${actionsHtml}</td>
-                    </tr>`;
-            }).join('');
+                    </tr>
+                `;}).join('');
             tbody.innerHTML = rows;
         }
 
@@ -740,52 +749,7 @@
             }
         }
 
-        function openMigrateUser(username) {
-            // Get current PIN from backend for this config user
-            fetch('/admin/users', { credentials: 'same-origin', cache: 'no-store' })
-                .then(res => res.json())
-                .then(data => {
-                    const user = data.users?.find(u => u.username === username);
-                    const currentPin = (user && user.source === 'config') ? user.pin || '' : '';
-                    showMigrateModal(username, currentPin);
-                })
-                .catch(() => showMigrateModal(username, ''));
-        }
-
-        function showMigrateModal(username, currentPin) {
-            const fields = `
-                <div style="color: rgba(0,0,0,0.75); margin-bottom:8px">Migrate <b>${username}</b> from <code>config.ini</code> to the JSON user store.</div>
-                <div style="margin-top:8px; font-size: 0.92em; color: rgba(0,0,0,0.6)">Current PIN will be preserved. You can optionally change it below.</div>
-                <label style="display:block; margin:12px 0 4px 2px; font-weight:600; color:rgba(0,0,0,0.8)">PIN (optional)</label>
-                <input id="um_mig_pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="leave blank to keep current PIN" value="${currentPin}" style="width:100%">
-            `;
-            showModal('Migrate User', fields, async (card) => {
-                const pin = card.querySelector('#um_mig_pin').value.trim();
-                if (pin && !/^\d{4,8}$/.test(pin)) { showToast('PIN must be 4-8 digits', 'error'); throw new Error('v'); }
-                await migrateUser(username, pin || undefined);
-            });
-        }
-
-        async function migrateUser(username, pin) {
-            try {
-                const res = await fetch('/admin/users/' + encodeURIComponent(username) + '/migrate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    cache: 'no-store',
-                    body: JSON.stringify(pin ? { pin } : {}),
-                });
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    showToast('Migration failed: ' + (err.error || res.status), 'error');
-                    return;
-                }
-                showToast('User migrated', 'success');
-                await loadUsers();
-            } catch (e) {
-                showToast('Migration failed', 'error');
-            }
-        }
+        // Individual migration functions removed - use Migrate All instead
 
         function openMigrateAll(btnId) {
             const fields = `
@@ -953,10 +917,9 @@
                     } catch (e) {}
                     return `
                         <div class="log-card">
-                            <div class="card-header">
-                                <span class="card-timestamp">${timestamp}</span>
-                                <span class="badge-status ${statusClass}">${log.status}</span>
-                            </div>
+                            <td class="actions-cell">
+                                <span class="source-badge config-only">Config-only</span>
+                            </td>
                             <div class="card-body">
                                 <div class="card-row"><span class="label">IP Address</span><span class="value">${log.ip}</span></div>
                                 <div class="card-row"><span class="label">User</span><span class="value">${log.user || 'UNKNOWN'}</span></div>
