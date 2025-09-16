@@ -41,3 +41,4 @@ ENV/
 logs/
 .env
 *.log
+users.json
