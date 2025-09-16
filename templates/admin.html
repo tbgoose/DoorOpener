@@ -359,8 +359,8 @@
             </div>
                 <button class="refresh-btn" onclick="loadLogs()">🔄 Refresh</button>
                 <div style="flex:1"></div>
-                <button class="refresh-btn" style="background: linear-gradient(135deg, #8e24aa, #6a1b9a);" onclick="clearLogs('test_only')">🧪 Clear Test Data</button>
-                <button class="refresh-btn" style="background: linear-gradient(135deg, #e53935, #c62828);" onclick="openClearAll()">🧹 Clear All Logs</button>
+                <button id="btnClearTest" class="refresh-btn" style="background: linear-gradient(135deg, #8e24aa, #6a1b9a);" onclick="clearLogs('test_only','btnClearTest')">🧪 Clear Test Data</button>
+                <button id="btnClearAll" class="refresh-btn" style="background: linear-gradient(135deg, #e53935, #c62828);" onclick="openClearAll('btnClearAll')">🧹 Clear All Logs</button>
             </div>
 
             <div id="logContainer" class="table-responsive">
@@ -388,7 +388,7 @@
                 <div style="display:flex; align-items:center; justify-content:space-between; margin: 0.5rem 0 1rem 0; gap:8px;">
                     <h2 style="margin:0;">👥 User Management</h2>
                     <div style="display:flex; gap:8px;">
-                        <button class="refresh-btn" onclick="openMigrateAll()" style="background: linear-gradient(135deg, #7b1fa2, #6a1b9a);">⬇️ Migrate All</button>
+                        <button id="btnMigrateAll" class="refresh-btn" onclick="openMigrateAll('btnMigrateAll')" style="background: linear-gradient(135deg, #7b1fa2, #6a1b9a);">⬇️ Migrate All</button>
                         <button class="refresh-btn" onclick="openAddUser()" style="background: linear-gradient(135deg, #1976d2, #1565c0);">➕ Add User</button>
                     </div>
                 </div>
@@ -774,18 +774,19 @@
             }
         }
 
-        function openMigrateAll() {
+        function openMigrateAll(btnId) {
             const fields = `
                 <div style="color: rgba(0,0,0,0.75); margin-bottom:8px">This will migrate all users from <code>config.ini</code> [pins] to the JSON user store using their existing PINs.</div>
                 <div style="font-size: 0.92em; color: rgba(0,0,0,0.6)">Proceed?</div>
             `;
             showModal('Migrate All Users', fields, async () => {
-                await migrateAll();
+                await migrateAll(btnId);
             });
         }
 
-        async function migrateAll() {
+        async function migrateAll(btnId) {
             try {
+                const restore = setButtonBusy(btnId, 'Migrating…');
                 const res = await fetch('/admin/users/migrate-all', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -800,8 +801,44 @@
                 } else {
                     showToast('Migrate-all failed: ' + (data.error || res.status), 'error');
                 }
+                if (typeof restore === 'function') restore();
             } catch (e) {
                 showToast('Migrate-all failed', 'error');
+            }
+        }
+
+        function openClearAll(btnId) {
+            const fields = `
+                <div style="color: rgba(0,0,0,0.75); margin-bottom:8px">This will permanently remove all log entries.</div>
+                <div style="font-size: 0.92em; color: rgba(0,0,0,0.6)">Are you sure?</div>
+            `;
+            showModal('Clear All Logs', fields, async () => {
+                await clearLogs('all', btnId);
+            });
+        }
+
+        async function clearLogs(mode, btnId) {
+            try {
+                const restore = setButtonBusy(btnId, mode === 'all' ? 'Clearing…' : 'Removing…');
+                const res = await fetch('/admin/logs/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    body: JSON.stringify({ mode })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showToast('Clear logs failed: ' + (data.error || res.status), 'error');
+                    if (typeof restore === 'function') restore();
+                    return;
+                }
+                const removed = data.removed ?? 0;
+                showToast((mode === 'all' ? 'All logs cleared' : `Removed ${removed} test entries`), 'success');
+                await loadLogs();
+                if (typeof restore === 'function') restore();
+            } catch (e) {
+                showToast('Clear logs failed', 'error');
             }
         }
 
