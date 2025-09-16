@@ -6,11 +6,13 @@
 - **NEW**: "Migrate All" functionality to bulk migrate config-only users from `config.ini` to JSON store
 - **NEW**: Full CRUD operations for JSON store users (Create, Edit, Delete, Activate/Deactivate)
 - **NEW**: Toast notifications throughout admin UI replacing blocking alert dialogs
-- **NEW**: Log management with "Clear Test Data" and "Clear All Logs" buttons
+- **NEW**: Log management with "Clear All Logs" functionality
 - **NEW**: Button busy states with inline progress indicators for long-running operations
+- **NEW**: Usage tracking - "Times Used" counter for each user showing door access frequency
 - **IMPROVED**: User PIN resolution now prioritizes JSON store over config.ini entries
 - **IMPROVED**: Migration process removes users from config.ini after successful JSON store creation
 - **IMPROVED**: Admin UI uses modern modals and responsive design patterns
+- **IMPROVED**: "Migrate All" button intelligently shows/hides based on available config-only users
 - **BREAKING**: Individual user migration removed - use "Migrate All" for bulk operations
 - **DEPRECATION**: config.ini [pins] section will be removed in a future version - migrate to JSON store
 
@@ -20,11 +22,14 @@
 - Enhanced error handling and logging for user management operations
 - Added `user_exists()` method to UsersStore class
 - Improved admin session authentication across all user management endpoints
+- Added `times_used` counter that increments on successful door access
+- Enhanced `touch_user()` method with usage tracking and backward compatibility
 
 ### 📝 Migration Instructions
 - Existing config.ini [pins] users can be migrated via Admin → Users → "Migrate All"
 - Migration preserves existing PINs and removes entries from config.ini
 - JSON store users gain full management capabilities (edit PIN, activate/deactivate)
+- Usage statistics are automatically tracked for all JSON store users
 - No downtime required - config and JSON users work simultaneously during transition
 
 ## v[1.9.0] - 2025-09-16
