@@ -138,6 +138,12 @@ url = http://homeassistant.local:8123
 token = your_long_lived_access_token
 switch_entity = switch.your_door_opener
 
+# Optional: trust a custom CA bundle (PEM) for HTTPS to Home Assistant
+# Example: /etc/dooropener/ha-ca.pem
+# If provided and readable, the app verifies TLS using this bundle.
+# If empty/not set, the system trust store is used (default).
+ca_bundle =
+
 [pins]
 alice = 1234
 bob = 5678
@@ -196,6 +202,49 @@ Notes:
 1. Environment variables (`.env` file) - highest priority
 2. `config.ini` settings
 3. Default values
+
+### Self-signed certificates (Home Assistant)
+
+If your Home Assistant uses a self-signed certificate, the recommended approach is to provide a custom CA bundle (PEM) and have DoorOpener verify TLS against it.
+
+Options:
+
+1. Config-based (recommended)
+
+   - Add `ca_bundle = /etc/dooropener/ha-ca.pem` under `[HomeAssistant]` in `config.ini`.
+   - Mount the file into the container as read-only.
+
+   Docker Compose example:
+
+   ```yaml
+   services:
+     dooropener:
+       volumes:
+         - ./config.ini:/app/config.ini:ro
+         - ./certs/ha-ca.pem:/etc/dooropener/ha-ca.pem:ro
+   ```
+
+2. Environment variable (no code/config change)
+
+   - Set one of these env vars so Python Requests uses your bundle:
+     - `REQUESTS_CA_BUNDLE=/etc/dooropener/ha-ca.pem`
+     - `SSL_CERT_FILE=/etc/dooropener/ha-ca.pem`
+
+   Docker Compose example:
+
+   ```yaml
+   services:
+     dooropener:
+       environment:
+         - REQUESTS_CA_BUNDLE=/etc/dooropener/ha-ca.pem
+       volumes:
+         - ./certs/ha-ca.pem:/etc/dooropener/ha-ca.pem:ro
+   ```
+
+Notes:
+
+- Ensure the hostname in `url` (e.g., `https://homeassistant.local`) matches a Subject Alternative Name in the certificate.
+- Build your PEM by concatenating the required certificates (root CA and any intermediates).
 
 ## Usage
 

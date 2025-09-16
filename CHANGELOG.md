@@ -1,3 +1,30 @@
+## v[1.9.0] - 2025-09-16
+
+### 🔐 TLS & Self‑Signed Certificates
+- Added support for trusting a custom CA bundle for Home Assistant HTTPS requests.
+- New `[HomeAssistant] ca_bundle` option in `config.ini` allows pointing to a PEM bundle.
+- When set and readable, all HA `requests.get/post` calls use `verify=<ca_bundle>`.
+- When not set, default system trust store is used (`verify=True`).
+- README updated with Docker compose mount examples and env var alternatives (`REQUESTS_CA_BUNDLE`, `SSL_CERT_FILE`).
+
+### 🛡️ Security Headers
+- Introduced per‑request CSP nonce and applied it to inline scripts in `templates/index.html` and `templates/admin.html`.
+- CSP tightened to rely on nonces for scripts, with a safe fallback when nonce generation fails.
+
+### 🔑 OIDC Logout Behavior
+- Restored 500 responses when the OIDC well‑known or `end_session_endpoint` is missing to align with tests/expectations.
+
+### 🧪 Tests
+- Added SSL tests to ensure `verify=True` by default (no ca_bundle) and `verify=<path>` when a bundle is configured for both GET and POST HA calls.
+- Adjusted admin auth tests to accept non‑blocking delay responses (HTTP 429) for progressive delays before blocking.
+
+### 📝 CI & Linting
+- pycodestyle step is now non‑blocking in CI (`continue-on-error: true`), emitting warnings instead of failing the job.
+- Fixed PEP 8 style (E203/E302) and Ruff issues (`Response` typing, removed unused import).
+
+### 📦 Version
+- Bumped version to 1.9.0.
+
 ## v[1.8.0] - 2025-09-11
 
 ### 🚀 PWA & Installability

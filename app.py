@@ -178,6 +178,14 @@ battery_entity = config.get(
     fallback=f"sensor.{entity_id.split('.')[1]}_battery",
 )
 
+# Optional custom CA bundle (PEM) to trust self-signed HA certificates
+ha_ca_bundle = config.get("HomeAssistant", "ca_bundle", fallback="").strip()
+if ha_ca_bundle and not os.path.exists(ha_ca_bundle):
+    logging.getLogger("dooropener").warning(
+        f"Configured HomeAssistant ca_bundle not found: {ha_ca_bundle}. Falling back to system trust store."
+    )
+    ha_ca_bundle = ""
+
 # Extract device name from entity
 if "." in entity_id:
     device_name = entity_id.split(".")[1]
@@ -372,7 +380,12 @@ def battery():
             f"Battery endpoint called - fetching state for entity: {battery_entity}"
         )
         url = f"{ha_url}/api/states/{battery_entity}"
-        response = requests.get(url, headers=ha_headers, timeout=10)
+        response = requests.get(
+            url,
+            headers=ha_headers,
+            timeout=10,
+            verify=(ha_ca_bundle or True),
+        )
         if response.status_code == 200:
             state_data = response.json()
             battery_level = state_data.get("state")
@@ -650,7 +663,11 @@ def open_door():
                     url = f"{ha_url}/api/services/switch/turn_on"
                 payload = {"entity_id": entity_id}
                 response = requests.post(
-                    url, headers=ha_headers, json=payload, timeout=10
+                    url,
+                    headers=ha_headers,
+                    json=payload,
+                    timeout=10,
+                    verify=(ha_ca_bundle or True),
                 )
                 response.raise_for_status()
                 if response.status_code == 200:
@@ -840,7 +857,11 @@ def open_door():
                     url = f"{ha_url}/api/services/switch/turn_on"
                 payload = {"entity_id": entity_id}
                 response = requests.post(
-                    url, headers=ha_headers, json=payload, timeout=10
+                    url,
+                    headers=ha_headers,
+                    json=payload,
+                    timeout=10,
+                    verify=(ha_ca_bundle or True),
                 )
 
                 response.raise_for_status()  # Raise an exception for bad status codes
