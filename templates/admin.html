@@ -218,24 +218,6 @@
                 padding: 8px;
             }
         }
-            const logsTab = document.getElementById('logsTab');
-            const usersTab = document.getElementById('usersTab');
-            const btnLogs = document.getElementById('tabLogsBtn');
-            const btnUsers = document.getElementById('tabUsersBtn');
-            if (tab === 'users') {
-                logsTab.style.display = 'none';
-                usersTab.style.display = 'block';
-                btnUsers.classList.add('active');
-                btnLogs.classList.remove('active');
-                loadUsers();
-            } else {
-                usersTab.style.display = 'none';
-                logsTab.style.display = 'block';
-                btnLogs.classList.add('active');
-                btnUsers.classList.remove('active');
-                loadLogs();
-            }
-        }
 
         /* Card-style table for very small screens */
         @media (max-width: 520px) {
