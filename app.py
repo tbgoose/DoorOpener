@@ -109,6 +109,21 @@ config = ConfigParser()
 config_path = os.path.join(os.path.dirname(__file__), "config.ini")
 config.read(config_path)
 
+
+def save_config() -> None:
+    """Persist the current in-memory config to disk atomically where possible.
+
+    Note: If config.ini is mounted read-only, this will raise a PermissionError or OSError.
+    """
+    # Write to a temp file then replace for safety
+    directory = os.path.dirname(config_path)
+    os.makedirs(directory, exist_ok=True)
+    tmp_path = os.path.join(directory, "config.ini.tmp")
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        config.write(f)
+    os.replace(tmp_path, config_path)
+
+
 # If no env secret key was provided, allow overriding the temporary random with config.ini
 if not _env_secret:
     try:
@@ -1526,6 +1541,87 @@ def admin_users_delete(username: str):
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
         return jsonify({"error": "Failed to delete user"}), 500
+
+
+@app.route("/admin/users/<username>/migrate", methods=["POST"])
+def admin_users_migrate(username: str):
+    """Migrate a config-only user into the JSON store and remove it from config.ini.
+
+    Optional JSON body: { "pin": "newpin" } – if omitted, reuse the existing config PIN.
+    Fails if config.ini is not writable.
+    """
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    # Must exist in config pins and not already in store
+    if username not in user_pins:
+        return jsonify({"error": "User not present in config"}), 404
+    body = request.get_json(silent=True) or {}
+    new_pin = body.get("pin")
+    # Use existing if not provided
+    existing_pin = user_pins.get(username)
+    if not isinstance(existing_pin, str):
+        return jsonify({"error": "Invalid existing PIN in config"}), 400
+    chosen_pin = new_pin if isinstance(new_pin, str) and new_pin else existing_pin
+    # Validate format (4-8 digits)
+    if not (chosen_pin.isdigit() and 4 <= len(chosen_pin) <= 8):
+        return jsonify({"error": "PIN must be 4-8 digits"}), 400
+
+    # First attempt to update config on disk; if that fails, abort before touching store
+    try:
+        if not config.has_section("pins"):
+            # If section missing unexpectedly, add it so we can remove+rewrite safely
+            config.add_section("pins")
+        # Remove option from in-memory config
+        if config.has_option("pins", username):
+            config.remove_option("pins", username)
+        # Persist
+        save_config()
+    except Exception as e:
+        logger.error(f"Config migration write failed: {e}")
+        return (
+            jsonify(
+                {
+                    "error": "Failed to write config.ini (is it read-only?)",
+                    "detail": str(e),
+                }
+            ),
+            423,
+        )
+
+    # Update in-memory baseline now that config is saved
+    try:
+        if username in user_pins:
+            user_pins.pop(username, None)
+    except Exception:
+        pass
+
+    # Create in store
+    try:
+        users_store.create_user(username, chosen_pin, True)
+        attempt_logger.info(
+            json.dumps(
+                {
+                    "timestamp": get_current_time().isoformat(),
+                    "ip": get_primary_ip_and_identifier()[0],
+                    "user": "ADMIN",
+                    "status": "ADMIN_USER_MIGRATE",
+                    "details": f"username={username}",
+                }
+            )
+        )
+        return jsonify({"status": "migrated"}), 200
+    except Exception as e:
+        # Try to restore config on failure (best effort)
+        try:
+            if not config.has_section("pins"):
+                config.add_section("pins")
+            config.set("pins", username, existing_pin)
+            save_config()
+            user_pins[username] = existing_pin
+        except Exception as e2:
+            logger.error(f"Failed to rollback config after migration failure: {e2}")
+        logger.error(f"Error creating user in store after config removal: {e}")
+        return jsonify({"error": "Failed to migrate user"}), 500
 
 
 @app.route("/oidc/logout")
