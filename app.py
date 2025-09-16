@@ -24,7 +24,10 @@ from flask import (
     redirect,
     url_for,
     send_from_directory,
+    g,
+    Response,
 )
+from users_store import UsersStore
 from werkzeug.middleware.proxy_fix import ProxyFix
 from configparser import ConfigParser
 import pytz
@@ -54,11 +57,14 @@ def get_current_time():
 
 # --- Logging Setup ---
 # Use a dedicated logs directory and rotate logs to avoid unbounded growth.
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
+# Allow overriding via DOOROPENER_LOG_DIR for tests or special deployments.
+log_dir = os.environ.get("DOOROPENER_LOG_DIR") or os.path.join(
+    os.path.dirname(__file__), "logs"
+)
 try:
     os.makedirs(log_dir, exist_ok=True)
 except Exception as e:
-    print(f"Could not create log directory: {e}")
+    logging.getLogger("dooropener").error(f"Could not create log directory: {e}")
 log_path = os.path.join(log_dir, "log.txt")
 
 # Dedicated logger for door attempts (audit trail)
@@ -118,8 +124,23 @@ if not _env_secret:
     except Exception:
         pass
 
-# Per-user PINs from [pins] section
+# Per-user PINs from [pins] section (baseline, read-only)
 user_pins = dict(config.items("pins")) if config.has_section("pins") else {}
+
+# JSON-backed users store (overrides and new users). Path can be overridden in tests via env.
+USERS_STORE_PATH = os.environ.get(
+    "USERS_STORE_PATH", os.path.join(os.path.dirname(__file__), "users.json")
+)
+users_store = UsersStore(USERS_STORE_PATH)
+
+
+def get_effective_user_pins() -> dict:
+    """Merge config.ini [pins] with JSON store users (active only)."""
+    try:
+        return users_store.effective_pins(user_pins)
+    except Exception:
+        return dict(user_pins)
+
 
 # Admin Configuration
 admin_password = config.get(
@@ -681,6 +702,10 @@ def open_door():
                         "details": reason,
                     }
                     attempt_logger.info(json.dumps(log_entry))
+                    try:
+                        users_store.touch_user(matched_user)
+                    except Exception:
+                        pass
                     display_name = (
                         matched_user.capitalize()
                         if isinstance(matched_user, str)
@@ -760,8 +785,8 @@ def open_door():
         pin_from_request = validated_pin
         matched_user = None
 
-        # Check PIN against user database
-        for user, user_pin in user_pins.items():
+        # Check PIN against user database (effective set)
+        for user, user_pin in get_effective_user_pins().items():
             if pin_from_request == user_pin:
                 matched_user = user
                 break
@@ -839,6 +864,10 @@ def open_door():
                     "details": reason,
                 }
                 attempt_logger.info(json.dumps(log_entry))
+                try:
+                    users_store.touch_user(matched_user)
+                except Exception:
+                    pass
                 display_name = matched_user.capitalize()
                 return jsonify(
                     {
@@ -877,6 +906,10 @@ def open_door():
                         "details": reason,
                     }
                     attempt_logger.info(json.dumps(log_entry))
+                    try:
+                        users_store.touch_user(matched_user)
+                    except Exception:
+                        pass
                     display_name = matched_user.capitalize()
                     return jsonify(
                         {
@@ -1354,6 +1387,145 @@ def admin_logs():
     except Exception as e:
         logger.error(f"Exception in admin_logs: {e}")
         return jsonify({"error": "Failed to load logs"}), 500
+
+
+# --- Admin: User Management Endpoints ---
+
+
+def _require_admin_authenticated():
+    if not session.get("admin_authenticated"):
+        return False
+    return True
+
+
+@app.route("/admin/users", methods=["GET"])
+def admin_users_list():
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    try:
+        # Build combined view: config pins (read-only) + store users (editable)
+        store_users = users_store.list_users(include_pins=False).get("users", [])
+        store_names = {u["username"] for u in store_users}
+        config_only = []
+        for name in sorted(user_pins.keys()):
+            if name in store_names:
+                continue
+            config_only.append(
+                {
+                    "username": name,
+                    "active": True,
+                    "created_at": None,
+                    "updated_at": None,
+                    "last_used_at": None,
+                    "source": "config",
+                    "can_edit": False,
+                }
+            )
+        # Mark store users as editable
+        for u in store_users:
+            u["source"] = "store"
+            u["can_edit"] = True
+        return jsonify({"users": store_users + config_only})
+    except Exception as e:
+        logger.error(f"Error listing users: {e}")
+        return jsonify({"error": "Failed to list users"}), 500
+
+
+@app.route("/admin/users", methods=["POST"])
+def admin_users_create():
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    try:
+        body = request.get_json(silent=True) or {}
+        username = body.get("username")
+        pin = body.get("pin")
+        active = bool(body.get("active", True))
+        if not username or not pin:
+            return jsonify({"error": "username and pin are required"}), 400
+        if username in user_pins:
+            return (
+                jsonify({"error": "User exists in config and cannot be edited via UI"}),
+                409,
+            )
+        users_store.create_user(username, pin, active)
+        attempt_logger.info(
+            json.dumps(
+                {
+                    "timestamp": get_current_time().isoformat(),
+                    "ip": get_primary_ip_and_identifier()[0],
+                    "user": "ADMIN",
+                    "status": "ADMIN_USER_CREATE",
+                    "details": f"username={username}",
+                }
+            )
+        )
+        return jsonify({"status": "created"}), 201
+    except KeyError:
+        return jsonify({"error": "User already exists"}), 409
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        return jsonify({"error": "Failed to create user"}), 500
+
+
+@app.route("/admin/users/<username>", methods=["PUT"])
+def admin_users_update(username: str):
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    if username in user_pins:
+        return jsonify({"error": "Config-defined users cannot be edited via UI"}), 409
+    try:
+        body = request.get_json(silent=True) or {}
+        pin = body.get("pin")
+        active = body.get("active")
+        users_store.update_user(username, pin=pin, active=active)
+        attempt_logger.info(
+            json.dumps(
+                {
+                    "timestamp": get_current_time().isoformat(),
+                    "ip": get_primary_ip_and_identifier()[0],
+                    "user": "ADMIN",
+                    "status": "ADMIN_USER_UPDATE",
+                    "details": f"username={username}",
+                }
+            )
+        )
+        return jsonify({"status": "updated"}), 200
+    except KeyError:
+        return jsonify({"error": "User not found"}), 404
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error updating user: {e}")
+        return jsonify({"error": "Failed to update user"}), 500
+
+
+@app.route("/admin/users/<username>", methods=["DELETE"])
+def admin_users_delete(username: str):
+    if not _require_admin_authenticated():
+        return jsonify({"error": "Authentication required"}), 401
+    if username in user_pins:
+        return jsonify({"error": "Config-defined users cannot be deleted via UI"}), 409
+    try:
+        users_store.delete_user(username)
+        attempt_logger.info(
+            json.dumps(
+                {
+                    "timestamp": get_current_time().isoformat(),
+                    "ip": get_primary_ip_and_identifier()[0],
+                    "user": "ADMIN",
+                    "status": "ADMIN_USER_DELETE",
+                    "details": f"username={username}",
+                }
+            )
+        )
+        return jsonify({"status": "deleted"}), 200
+    except KeyError:
+        return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        return jsonify({"error": "Failed to delete user"}), 500
 
 
 @app.route("/oidc/logout")

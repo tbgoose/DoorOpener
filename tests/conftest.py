@@ -56,6 +56,11 @@ def setup_mocks():
 @pytest.fixture
 def client():
     """Create test client with test configuration."""
+    import tempfile
+
+    # Ensure test logs do not pollute repo logs
+    os.environ["DOOROPENER_LOG_DIR"] = tempfile.mkdtemp(prefix="dooropener_test_logs_")
+
     from app import app as flask_app
 
     flask_app.config.update(
