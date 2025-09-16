@@ -115,13 +115,24 @@ def save_config() -> None:
 
     Note: If config.ini is mounted read-only, this will raise a PermissionError or OSError.
     """
-    # Write to a temp file then replace for safety
-    directory = os.path.dirname(config_path)
-    os.makedirs(directory, exist_ok=True)
-    tmp_path = os.path.join(directory, "config.ini.tmp")
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        config.write(f)
-    os.replace(tmp_path, config_path)
+    import tempfile
+
+    # Write to a temp file in the same directory as config.ini
+    config_dir = os.path.dirname(config_path) or "."
+    fd, temp_path = tempfile.mkstemp(suffix=".tmp", prefix="config.", dir=config_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as temp_file:
+            config.write(temp_file)
+        # Atomically replace the original file
+        os.replace(temp_path, config_path)
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception:
+            pass
+        raise
 
 
 # If no env secret key was provided, allow overriding the temporary random with config.ini
@@ -1631,59 +1642,45 @@ def admin_users_delete(username: str):
 
 @app.route("/admin/users/<username>/migrate", methods=["POST"])
 def admin_users_migrate(username: str):
-    """Migrate a config-only user into the JSON store and remove it from config.ini.
+    """Migrate a user from config.ini [pins] to the JSON user store.
 
-    Optional JSON body: { "pin": "newpin" } – if omitted, reuse the existing config PIN.
-    Fails if config.ini is not writable.
+    Optionally accepts {"pin": "new_pin"} to set a new PIN during migration.
+    If no PIN provided, uses the existing PIN from config.ini.
+    Config entry remains but is ignored when user exists in JSON store.
     """
     if not _require_admin_authenticated():
         return jsonify({"error": "Authentication required"}), 401
-    # Must exist in config pins and not already in store
-    if username not in user_pins:
-        return jsonify({"error": "User not present in config"}), 404
+
+    # Get existing PIN from config
+    existing_pin = user_pins.get(username)
+    if not existing_pin:
+        return jsonify({"error": "User not found in config"}), 404
+
+    # Parse optional new PIN from request
     body = request.get_json(silent=True) or {}
     new_pin = body.get("pin")
-    # Use existing if not provided
-    existing_pin = user_pins.get(username)
-    if not isinstance(existing_pin, str):
-        return jsonify({"error": "Invalid existing PIN in config"}), 400
-    chosen_pin = new_pin if isinstance(new_pin, str) and new_pin else existing_pin
-    # Validate format (4-8 digits)
-    if not (chosen_pin.isdigit() and 4 <= len(chosen_pin) <= 8):
+    if new_pin is not None:
+        if (
+            not isinstance(new_pin, str)
+            or not new_pin.isdigit()
+            or not (4 <= len(new_pin) <= 8)
+        ):
+            return jsonify({"error": "PIN must be 4-8 digits"}), 400
+        pin_to_use = new_pin
+    else:
+        pin_to_use = existing_pin
+
+    # Validate PIN format
+    if (
+        not isinstance(pin_to_use, str)
+        or not pin_to_use.isdigit()
+        or not (4 <= len(pin_to_use) <= 8)
+    ):
         return jsonify({"error": "PIN must be 4-8 digits"}), 400
 
-    # First attempt to update config on disk; if that fails, abort before touching store
+    # Create user in JSON store (config entry will be ignored once this exists)
     try:
-        if not config.has_section("pins"):
-            # If section missing unexpectedly, add it so we can remove+rewrite safely
-            config.add_section("pins")
-        # Remove option from in-memory config
-        if config.has_option("pins", username):
-            config.remove_option("pins", username)
-        # Persist
-        save_config()
-    except Exception as e:
-        logger.error(f"Config migration write failed: {e}")
-        return (
-            jsonify(
-                {
-                    "error": "Failed to write config.ini (is it read-only?)",
-                    "detail": str(e),
-                }
-            ),
-            423,
-        )
-
-    # Update in-memory baseline now that config is saved
-    try:
-        if username in user_pins:
-            user_pins.pop(username, None)
-    except Exception:
-        pass
-
-    # Create in store
-    try:
-        users_store.create_user(username, chosen_pin, True)
+        users_store.create_user(username, pin_to_use, True)
         attempt_logger.info(
             json.dumps(
                 {
@@ -1695,18 +1692,9 @@ def admin_users_migrate(username: str):
                 }
             )
         )
-        return jsonify({"status": "migrated"}), 200
+        return jsonify({"status": "migrated"})
     except Exception as e:
-        # Try to restore config on failure (best effort)
-        try:
-            if not config.has_section("pins"):
-                config.add_section("pins")
-            config.set("pins", username, existing_pin)
-            save_config()
-            user_pins[username] = existing_pin
-        except Exception as e2:
-            logger.error(f"Failed to rollback config after migration failure: {e2}")
-        logger.error(f"Error creating user in store after config removal: {e}")
+        logger.error(f"Error creating user in store: {e}")
         return jsonify({"error": "Failed to migrate user"}), 500
 
 
