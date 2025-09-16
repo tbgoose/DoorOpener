@@ -1685,7 +1685,7 @@ def admin_users_migrate(username: str):
             json.dumps(
                 {
                     "timestamp": get_current_time().isoformat(),
-                    "ip": get_primary_ip_and_identifier()[0],
+                    "ip": request.remote_addr or "unknown",
                     "user": "ADMIN",
                     "status": "ADMIN_USER_MIGRATE",
                     "details": f"username={username}",
@@ -1735,7 +1735,7 @@ def admin_users_migrate_all():
                 json.dumps(
                     {
                         "timestamp": get_current_time().isoformat(),
-                        "ip": get_primary_ip_and_identifier()[0],
+                        "ip": request.remote_addr or "unknown",
                         "user": "ADMIN",
                         "status": "ADMIN_USER_MIGRATE",
                         "details": f"username={username}",

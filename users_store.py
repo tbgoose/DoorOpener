@@ -55,19 +55,8 @@ class UsersStore:
 
     def _save_atomic(self) -> None:
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        fd, tmp_path = tempfile.mkstemp(
-            prefix="users.", suffix=".json", dir=os.path.dirname(self.path) or None
-        )
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as tmp:
-                json.dump(self.data, tmp, ensure_ascii=False, indent=2)
-            os.replace(tmp_path, self.path)
-        finally:
-            try:
-                if os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except Exception:
-                pass
+        with open(self.path, "w", encoding="utf-8") as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
 
     def effective_pins(self, base_pins: Dict[str, str]) -> Dict[str, str]:
         self._load_file()

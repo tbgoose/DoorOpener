@@ -15,8 +15,9 @@ services:
     ports:
       - "${DOOROPENER_PORT:-6532}:${DOOROPENER_PORT:-6532}"
     volumes:
-      - ./config.ini:/app/config.ini:rw # Read-only mount
+      - ./config.ini:/app/config.ini:rw # Read-write mount
       - ./logs:/app/logs
+      - ./users.json:/app/users.json:rw
     restart: unless-stopped
 
     healthcheck:
