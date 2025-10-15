@@ -113,6 +113,31 @@ class UsersStore:
     def _validate_pin(pin: str) -> bool:
         return isinstance(pin, str) and pin.isdigit() and 4 <= len(pin) <= 8
 
+    # --- ADD NEW _validate_schedule METHOD HERE ---
+    @staticmethod
+    def _validate_schedule(schedule: str) -> bool:
+        """Validates the HH:MM-HH:MM schedule format."""
+        if not isinstance(schedule, str):
+            return False
+        
+        try:
+            # Check format: HH:MM-HH:MM
+            parts = schedule.split('-')
+            if len(parts) != 2:
+                return False
+            
+            # Simple check for HH:MM validity
+            for part in parts:
+                datetime.strptime(part.strip(), '%H:%M')
+            return True
+        except ValueError:
+            return False
+        except Exception:
+            return False
+    # --- END NEW METHOD ---
+
+    def create_user(self, username: str, pin: str, active: bool = True) -> None:
+        self._ensure_loaded()
     def create_user(self, username: str, pin: str, active: bool = True) -> None:
         self._ensure_loaded()
         if not self._validate_username(username):
